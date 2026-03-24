@@ -87,7 +87,7 @@ export default function GrantReports() {
               width: '100%', padding: '11px 0', borderRadius: 8,
               background: '#111827', border: 'none', color: '#fff',
               fontSize: 13, fontWeight: 500, cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif', letterSpacing: '0.02em",
+              fontFamily: "'Outfit', sans-serif", letterSpacing: '0.02em',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >

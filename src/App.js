@@ -7,7 +7,6 @@ import AudioDescriptions from './pages/AudioDescriptions';
 import ARAnchors from './pages/ARAnchors';
 import GrantReports from './pages/GrantReports';
 
-// Error boundary — catches render-time exceptions and surfaces them visibly
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
@@ -38,21 +37,21 @@ function CurrentPage({ page }) {
 
 export default function App() {
   const [page, setPage] = useState('ada');
-
   return (
     <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
+      display: 'flex',
+      width: '100vw',
+      height: '100vh',
+      overflow: 'hidden',
       background: '#FCFCFC',
       fontFamily: "'Outfit', sans-serif",
     }}>
-      <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+      <ErrorBoundary>
+        <Sidebar activePage={page} onNavigate={setPage} />
         <ErrorBoundary>
-          <Sidebar activePage={page} onNavigate={setPage} />
-          <ErrorBoundary>
-            <CurrentPage page={page} />
-          </ErrorBoundary>
+          <CurrentPage page={page} />
         </ErrorBoundary>
-      </div>
+      </ErrorBoundary>
     </div>
   );
 }
