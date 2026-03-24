@@ -1,124 +1,131 @@
 # Gestalt Museum Dashboard
 
-**Standalone admin dashboard for museum and gallery accessibility management.**
-
-> Stripe meets MoMA — dark sidebar, serif headings, clean data tables.
+**Standalone React admin dashboard for museum and gallery owners.**
+GitHub: https://github.com/chriscarter123/gestalt-museum-dashboard
 
 ---
 
 ## Overview
 
-A React-based web application that gives museum accessibility officers and gallery administrators a unified view of their ADA compliance status, visitor engagement, artwork coverage, AR anchor reliability, and grant reporting. Data is currently mock/static; Firestore integration is planned.
+A six-page accessibility and content management dashboard scoped to a single institution. Designed to surface ADA compliance metrics, manage audio descriptions and AR anchors, and generate grant-ready reports. Data is currently mock/static — real Firestore integration is a planned future milestone.
+
+Stack: React 18 (Create React App), inline styles, Outfit (UI) + Newsreader (display) typefaces.
 
 ---
 
-## Tech Stack
+## Running locally
 
-| Layer | Choice |
-|---|---|
-| Framework | React 18 (Create React App) |
-| Routing | In-component `useState` switch (no router library) |
-| Styling | Inline styles + global `index.css` |
-| Fonts | Outfit (UI), Newsreader (headings) via Google Fonts |
-| Data | Mock/static (`src/data/mockData.js`) |
-| Deployment | TBD (Firebase Hosting or Vercel) |
+```bash
+npm install
+npm start          # dev server on localhost:3001 (HOST=localhost via .env)
 
----
-
-## Repository Structure
-
+# or serve the production build (more reliable in Chrome):
+npm run build
+npx serve -s build -l 3001
 ```
-gestalt-museum-dashboard/
-├── public/
-│   └── index.html
-├── src/
-│   ├── data/
-│   │   └── mockData.js          # All mock data for all 6 pages
-│   ├── components/
-│   │   ├── Sidebar.js           # Dark left nav with section groups
-│   │   ├── PageShell.js         # Shared page wrapper (title bar + action button)
-│   │   ├── MetricCard.js        # KPI card with ring chart + trend badge
-│   │   ├── RingChart.js         # SVG ring/donut chart component
-│   │   └── StatusBadge.js       # Pill badge (Excellent / Good / Needs work etc.)
-│   ├── pages/
-│   │   ├── ADAScorecard.js      # ADA compliance overview + gallery table
-│   │   ├── VisitorAnalytics.js  # Visitor metrics + traffic charts
-│   │   ├── Artworks.js          # Filterable artwork management table
-│   │   ├── AudioDescriptions.js # Audio coverage + generation queue
-│   │   ├── ARAnchors.js         # AR anchor reliability management
-│   │   └── GrantReports.js      # Report generation + history
-│   ├── App.js                   # Root layout + page router + ErrorBoundary
-│   ├── index.js                 # React 18 root render
-│   └── index.css                # Global reset, fonts, scrollbar
-└── PROJECT.md
-```
+
+> **Note:** The `.env` file locks `HOST=localhost` to prevent Chrome from blocking the webpack HMR WebSocket at `0.0.0.0`. Always use the production build path if the dev server renders blank.
 
 ---
 
 ## Pages
 
 ### ADA Scorecard
-Primary landing page. Four KPI metric cards (audio coverage, languages, wheelchair access, AR reliability), gallery breakdown table with progress bars, audio plays bar chart, and language demand chart.
+The primary compliance overview page.
+- 4 ring-chart metric cards: Audio descriptions (73%), Languages (4), Wheelchair access (91%), AR reliability (0.74)
+- Gallery breakdown table with progress bars, wheelchair dot indicators, AR scores, and status badges
+- Floor filter pills (All / Ground / Floor 2 / Floor 3)
+- Audio plays bar chart (last 7 days)
+- Language demand horizontal bars (EN / ES / ZH / FR)
 
 ### Visitor Analytics
-Monthly visitor metrics with day-of-week bar chart, gallery traffic ranking, device breakdown (iOS / mobile web / desktop), and peak hour context.
+Traffic and engagement data.
+- 4 metric cards: Total visitors, Avg session, Audio engagement, Return rate
+- Daily visitors bar chart with 7d / 30d / 90d range filter
+- Gallery traffic horizontal bar chart
+- Device breakdown stacked bar: iOS app / Web (mobile) / Web (desktop)
 
 ### Artworks
-Full artwork table with search, gallery filter, type filter, and status filter. Columns: title, artist, gallery, type, audio status, AR score, status badge, actions.
+Full artwork inventory with filtering.
+- Summary strip: total count, with audio, missing audio, avg AR score
+- Live search (title or artist) + 3 dropdown filters (gallery, type, status)
+- Table: title, artist, gallery, type, audio indicator, AR score mini-bar, status badge, Edit CTA
 
 ### Audio Descriptions
-Coverage summary cards, audio track table with language, duration, source (AI vs. manual), and status. Actions: Generate, Edit, Preview per track.
+Audio coverage management and AI generation queue.
+- 4 metric cards: Covered, Pending generation, Missing, Languages
+- Track library table filterable by All / Published / Pending / Missing
+- Per-track actions: Play (published), Generate (pending/missing)
+- AI-generated tracks flagged with ✦ AI in gold
 
 ### AR Anchors
-Anchor reliability table with calibration dates, status badges (Calibrated / Needs Recalibration / Flagged). Metric cards for total anchors, avg reliability, below-threshold count, and calibrated today.
+Visual recognition anchor management.
+- 4 metric cards: Total anchors, Avg reliability, Below threshold, Calibrated today
+- Below-threshold callout banner (red/amber) with link to schedule recalibration
+- Anchor registry table filterable by status
+- Reliability bar per row, color-coded green (>=0.75) / gold (>=0.5) / red (<0.5)
+- Per-row Recalibrate CTA on non-calibrated anchors
 
 ### Grant Reports
-Report type selector, date range inputs, live metrics preview, export button, and historical report log with status (draft / final).
+ADA compliance report builder for NEA and state arts council submissions.
+- Report type card selector (ADA Annual / Audio Coverage / Accessibility Grant / AR Audit)
+- Period picker (Q1 2026, FY 2025, etc.)
+- Live preview panel: 4 key stats + AI summary paragraph
+- Export as PDF action button
+- Report history list with status badges and PDF download CTAs
 
 ---
 
-## Design System
+## Component structure
 
-Inherits Gestalt brand tokens:
-
-| Token | Value |
-|---|---|
-| Green (primary) | `#14B860` |
-| Gold (secondary) | `#D4AF37` |
-| Red (alert) | `#E24B4A` |
-| Dark navy (sidebar) | `#111827` |
-| Off-white (content bg) | `#FCFCFC` |
-| Heading font | Newsreader (serif) |
-| UI font | Outfit (sans-serif) |
-
----
-
-## Running Locally
-
-```bash
-npm install
-npm start          # dev server → http://localhost:3000
-npm run build      # production build
+```
+src/
+├── components/
+│   ├── Sidebar.js          # Dark nav sidebar with Gestalt logo, section groups, user footer
+│   ├── PageShell.js        # Page wrapper: title, subtitle, optional action button
+│   ├── MetricCard.js       # Ring chart + value + detail + trend badge
+│   ├── RingChart.js        # SVG ring chart (r=28, stroke-dashoffset animation)
+│   └── StatusBadge.js      # Colored pill badge (up/down/flat)
+├── pages/
+│   ├── ADAScorecard.js
+│   ├── VisitorAnalytics.js
+│   ├── Artworks.js
+│   ├── AudioDescriptions.js
+│   ├── ARAnchors.js
+│   └── GrantReports.js
+└── data/
+    └── mockData.js         # All static data: institution, metrics, artworks, anchors, etc.
 ```
 
 ---
 
-## Session Log
+## Design tokens
 
-### Session 1 — 2026-03-23
-- Scaffolded standalone CRA project (`gestalt-museum-dashboard`)
-- Built all 6 pages with mock data (ADA Scorecard, Visitor Analytics, Artworks, Audio Descriptions, AR Anchors, Grant Reports)
-- Full shared component library: Sidebar, PageShell, MetricCard, RingChart, StatusBadge
-- Full-screen layout (no max-width constraint, sidebar + scrollable content pane)
-- Initialized repo and pushed to `github.com/chriscarter123/gestalt-museum-dashboard`
+| Token | Value |
+|---|---|
+| Green (positive) | `#14B860` |
+| Gold (caution) | `#D4AF37` |
+| Red (alert) | `#E24B4A` |
+| Dark navy (sidebar, CTA) | `#111827` |
+| Surface | `#FCFCFC` |
+| Display font | Newsreader (serif) |
+| UI font | Outfit (sans) |
 
 ---
 
-## Roadmap
+## Planned — next milestones
 
-- [ ] Wire to Firestore (shared data layer with main Gestalt app)
-- [ ] Auth — restrict to institution admins
-- [ ] PDF export for grant reports
-- [ ] AI audio description generation trigger from Audio Descriptions page
-- [ ] AR anchor recalibration workflow
-- [ ] Multi-institution support (institution switcher in sidebar)
+- [ ] Wire artworkService.js from museum-ar-app as real data source (Firestore)
+- [ ] Audio playback (Web Audio API) for published tracks
+- [ ] PDF export via jsPDF or server-side rendering
+- [ ] Multi-institution support (institution switcher in Sidebar footer)
+- [ ] Auth gate (Firebase anonymous -> staff SSO)
+- [ ] Mobile-responsive layout (currently desktop-first)
+
+---
+
+## Session log
+
+| Session | Date | Work |
+|---|---|---|
+| 1 | 2026-03-23 | Initial build — all 6 pages, shared components, mock data, full-width layout, GitHub push |
