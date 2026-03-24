@@ -129,3 +129,4 @@ src/
 | Session | Date | Work |
 |---|---|---|
 | 1 | 2026-03-23 | Initial build — all 6 pages, shared components, mock data, full-width layout, GitHub push |
+| 2 | 2026-03-23 | Debugged Chrome blank page (webpack HMR WebSocket blocked at `0.0.0.0`); fixed with `HOST=localhost` in `.env`; switched to `npx serve -s build` as primary dev workflow; fixed `GrantReports.js` CSS string bug (stray quote in `fontFamily` value); confirmed full 6-page feature set against spec |
