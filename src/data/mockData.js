@@ -1,3 +1,81 @@
+// ── Venue Config ──────────────────────────────────────────────────────────────
+export const venue = {
+  id: "venue_001",
+  name: "Philadelphia Museum of Art",
+  type: "museum",
+  tier: "institution",
+  onboardingComplete: true,
+  floorCount: 3,
+  artworkCount: 302,
+  address: "2600 Benjamin Franklin Pkwy, Philadelphia, PA 19130",
+  lat: 39.9656,
+  lng: -75.1810,
+  proximityRadiusMeters: 50,
+  owner: {
+    name: "Julia Martinez",
+    role: "Accessibility Officer",
+    initials: "JM",
+  },
+  plan: {
+    artworkLimit: null,
+    analyticsEnabled: true,
+    grantReportsEnabled: true,
+    exhibitionsEnabled: true,
+    multiFloorEnabled: true,
+    arAnchorsEnabled: true,
+    customBrandingEnabled: true,
+  },
+};
+
+export const venueGalleryDemo = {
+  id: "venue_demo",
+  name: "",
+  type: null,
+  tier: "starter",
+  onboardingComplete: false,
+  floorCount: 1,
+  artworkCount: 0,
+  address: "",
+  lat: null,
+  lng: null,
+  proximityRadiusMeters: 15,
+  owner: {
+    name: "",
+    role: "Gallery Owner",
+    initials: "",
+  },
+  plan: {
+    artworkLimit: 5,
+    analyticsEnabled: false,
+    grantReportsEnabled: false,
+    exhibitionsEnabled: false,
+    multiFloorEnabled: false,
+    arAnchorsEnabled: false,
+    customBrandingEnabled: false,
+  },
+};
+
+export const exhibitions = [
+  {
+    id: "exh_001",
+    name: "Spring Acquisitions 2026",
+    startDate: "2026-03-01",
+    endDate: "2026-05-31",
+    status: "active",
+    artworkIds: ["ART-001", "ART-002", "ART-003"],
+    description: "New works acquired in Q1 2026",
+  },
+  {
+    id: "exh_002",
+    name: "Winter Show 2025",
+    startDate: "2025-11-15",
+    endDate: "2026-01-10",
+    status: "archived",
+    artworkIds: ["ART-010", "ART-011"],
+    description: "",
+  },
+];
+
 // ── Institution ───────────────────────────────────────────────────────────────
 export const institution = {
   name: 'Philadelphia Museum of Art',

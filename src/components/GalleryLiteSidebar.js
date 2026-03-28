@@ -1,17 +1,12 @@
 import React from 'react';
-import { institution } from '../data/mockData';
 
 const NAV = [
   {
-    section: 'Overview',
+    section: null,
     items: [
       {
-        id: 'ada', label: 'ADA scorecard',
-        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>,
-      },
-      {
-        id: 'analytics', label: 'Visitor analytics',
-        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><polyline points="2 12 5 6 8 9 11 4 14 8"/><line x1="2" y1="14" x2="14" y2="14"/></svg>,
+        id: 'gallery-home', label: 'My Gallery',
+        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z"/><rect x="6" y="9" width="4" height="6" rx="0.5"/></svg>,
       },
     ],
   },
@@ -23,28 +18,45 @@ const NAV = [
         icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="7" r="1.5"/><polyline points="14 13 10 9 7 12"/></svg>,
       },
       {
-        id: 'audio', label: 'Audio descriptions',
-        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="8" cy="7" r="3"/><path d="M5 7v2a3 3 0 006 0V7"/><line x1="8" y1="12" x2="8" y2="14"/><line x1="5" y1="14" x2="11" y2="14"/></svg>,
-      },
-      {
-        id: 'anchors', label: 'AR anchors',
-        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="8" cy="8" r="3"/><line x1="8" y1="2" x2="8" y2="5"/><line x1="8" y1="11" x2="8" y2="14"/><line x1="2" y1="8" x2="5" y2="8"/><line x1="11" y1="8" x2="14" y2="8"/></svg>,
+        id: 'qr-sharing', label: 'QR & Sharing',
+        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><rect x="2" y="2" width="5" height="5" rx="0.5"/><rect x="9" y="2" width="5" height="5" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="0.5"/><rect x="3.5" y="3.5" width="2" height="2" fill="currentColor" stroke="none"/><rect x="10.5" y="3.5" width="2" height="2" fill="currentColor" stroke="none"/><rect x="3.5" y="10.5" width="2" height="2" fill="currentColor" stroke="none"/><line x1="10" y1="10" x2="10" y2="10"/><polyline points="10 10 14 10 14 14 10 14 10 12"/></svg>,
       },
     ],
   },
   {
-    section: 'Reports',
+    section: 'Insights',
     items: [
       {
-        id: 'reports', label: 'Grant reports',
-        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M4 2h8l2 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="9" y2="11"/></svg>,
+        id: 'visitor-insights', label: 'Visitor Insights',
+        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><polyline points="2 12 5 6 8 9 11 4 14 8"/><line x1="2" y1="14" x2="14" y2="14"/></svg>,
+      },
+    ],
+  },
+  {
+    section: 'Account',
+    items: [
+      {
+        id: 'plan-billing', label: 'Plan & Billing',
+        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><polygon points="8 2 10 6 14 6.5 11 9.5 11.8 14 8 12 4.2 14 5 9.5 2 6.5 6 6 8 2"/></svg>,
       },
     ],
   },
 ];
 
-export default function Sidebar({ activePage, onNavigate }) {
-  const { user } = institution;
+function tierLabel(venue) {
+  if (venue.tier === 'starter') return 'Free Plan';
+  if (venue.tier === 'gallery') return 'Gallery Plan';
+  return 'Institution Plan';
+}
+
+function artworkUsageLabel(venue) {
+  const limit = venue.plan?.artworkLimit;
+  if (!limit) return 'Unlimited artworks';
+  return `${venue.artworkCount} / ${limit} artworks`;
+}
+
+export default function GalleryLiteSidebar({ activePage, onNavigate, venue }) {
+  const owner = venue?.owner || {};
 
   return (
     <div style={{
@@ -69,15 +81,17 @@ export default function Sidebar({ activePage, onNavigate }) {
 
       {/* Nav */}
       <div style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
-        {NAV.map(({ section, items }) => (
-          <div key={section}>
-            <div style={{
-              fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em',
-              textTransform: 'uppercase', padding: '12px 20px 6px',
-              fontWeight: 500, fontFamily: "'Outfit', sans-serif",
-            }}>
-              {section}
-            </div>
+        {NAV.map(({ section, items }, si) => (
+          <div key={si}>
+            {section && (
+              <div style={{
+                fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em',
+                textTransform: 'uppercase', padding: '12px 20px 6px',
+                fontWeight: 500, fontFamily: "'Outfit', sans-serif",
+              }}>
+                {section}
+              </div>
+            )}
             {items.map(({ id, label, icon }) => {
               const active = activePage === id;
               return (
@@ -105,17 +119,20 @@ export default function Sidebar({ activePage, onNavigate }) {
         ))}
       </div>
 
-      {/* Tier badge */}
-      <div style={{
-        margin: '0 12px 12px', padding: '8px 12px',
-        background: 'rgba(20,184,96,0.1)', border: '1px solid rgba(20,184,96,0.2)',
-        borderRadius: 6,
-      }}>
+      {/* Tier pill */}
+      <div
+        onClick={() => onNavigate('plan-billing')}
+        style={{
+          margin: '0 12px 12px', padding: '8px 12px',
+          background: 'rgba(20,184,96,0.1)', border: '1px solid rgba(20,184,96,0.2)',
+          borderRadius: 6, cursor: 'pointer',
+        }}
+      >
         <div style={{ fontSize: 11, fontWeight: 600, color: '#14B860', fontFamily: "'Outfit', sans-serif" }}>
-          Institution Plan
+          {tierLabel(venue)}
         </div>
         <div style={{ fontSize: 10, color: 'rgba(20,184,96,0.7)', fontFamily: "'Outfit', sans-serif", marginTop: 2 }}>
-          Unlimited artworks
+          {artworkUsageLabel(venue)}
         </div>
       </div>
 
@@ -130,11 +147,11 @@ export default function Sidebar({ activePage, onNavigate }) {
           fontSize: 11, fontWeight: 600, color: '#111827', flexShrink: 0,
           fontFamily: "'Outfit', sans-serif",
         }}>
-          {user.initials}
+          {owner.initials || '?'}
         </div>
         <div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: "'Outfit', sans-serif" }}>{user.name}</div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Outfit', sans-serif" }}>{user.role}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: "'Outfit', sans-serif" }}>{owner.name || 'Gallery Owner'}</div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Outfit', sans-serif" }}>{owner.role || 'Owner'}</div>
         </div>
       </div>
     </div>
