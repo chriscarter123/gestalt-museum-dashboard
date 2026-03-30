@@ -1,8 +1,10 @@
 import React from 'react';
 
+// Section numbers map to nav group order
 const NAV = [
   {
     section: null,
+    sectionNum: null,
     items: [
       {
         id: 'gallery-home', label: 'My Gallery',
@@ -12,6 +14,7 @@ const NAV = [
   },
   {
     section: 'Content',
+    sectionNum: '01',
     items: [
       {
         id: 'artworks', label: 'Artworks',
@@ -25,6 +28,7 @@ const NAV = [
   },
   {
     section: 'Insights',
+    sectionNum: '02',
     items: [
       {
         id: 'visitor-insights', label: 'Visitor Insights',
@@ -34,6 +38,7 @@ const NAV = [
   },
   {
     section: 'Account',
+    sectionNum: '03',
     items: [
       {
         id: 'plan-billing', label: 'Plan & Billing',
@@ -44,15 +49,92 @@ const NAV = [
 ];
 
 function tierLabel(venue) {
-  if (venue.tier === 'starter') return 'Free Plan';
-  if (venue.tier === 'gallery') return 'Gallery Plan';
-  return 'Institution Plan';
+  if (venue.tier === 'starter') return 'Free';
+  if (venue.tier === 'gallery') return 'Gallery';
+  return 'Institution';
 }
 
 function artworkUsageLabel(venue) {
   const limit = venue.plan?.artworkLimit;
-  if (!limit) return 'Unlimited artworks';
-  return `${venue.artworkCount} / ${limit} artworks`;
+  if (!limit) return 'Unlimited';
+  return `${venue.artworkCount || 0} / ${limit} works`;
+}
+
+// Edition Tag (dark variant) — left color strip + serif plan name
+function TierTag({ venue, onClick }) {
+  const isGallery = venue.tier === 'gallery';
+  const isInstitution = venue.tier === 'institution';
+  const stripColor = isInstitution ? '#D4AF37' : isGallery ? '#14B860' : 'rgba(255,255,255,0.2)';
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        margin: '0 14px 14px',
+        display: 'flex',
+        alignItems: 'stretch',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 3,
+        overflow: 'hidden',
+        height: 38,
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      {/* Left color strip */}
+      <div style={{
+        width: 28,
+        background: stripColor,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <span style={{
+          fontSize: 8,
+          fontWeight: 700,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: isInstitution ? '#7a5c10' : '#fff',
+          writingMode: 'vertical-rl',
+          transform: 'rotate(180deg)',
+          fontFamily: "'Outfit', sans-serif",
+        }}>
+          Plan
+        </span>
+      </div>
+      {/* Body */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: '0 10px',
+        gap: 1,
+        background: 'rgba(255,255,255,0.03)',
+      }}>
+        <div style={{
+          fontFamily: "'Newsreader', serif",
+          fontSize: 13,
+          fontWeight: 600,
+          color: isInstitution ? '#D4AF37' : isGallery ? '#14B860' : 'rgba(255,255,255,0.5)',
+          lineHeight: 1,
+          letterSpacing: '0.01em',
+        }}>
+          {tierLabel(venue)}
+        </div>
+        <div style={{
+          fontSize: 8,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.25)',
+          fontFamily: "'Outfit', sans-serif",
+        }}>
+          {artworkUsageLabel(venue)}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function GalleryLiteSidebar({ activePage, onNavigate, venue }) {
@@ -65,14 +147,15 @@ export default function GalleryLiteSidebar({ activePage, onNavigate, venue }) {
     }}>
       {/* Logo */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '20px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '22px 20px 18px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <div style={{ width: 28, height: 28, position: 'relative', flexShrink: 0 }}>
-          <div style={{ position: 'absolute', width: 12, height: 12, top: 0, left: 0, background: '#14B860', borderRadius: '3px 3px 12px 3px' }} />
-          <div style={{ position: 'absolute', width: 12, height: 12, top: 0, right: 0, border: '1.5px solid #14B860', borderRadius: '3px 3px 3px 12px', boxSizing: 'border-box' }} />
-          <div style={{ position: 'absolute', width: 12, height: 12, bottom: 0, left: 0, border: '1.5px solid #14B860', borderRadius: '3px 12px 3px 3px', boxSizing: 'border-box' }} />
-          <div style={{ position: 'absolute', width: 12, height: 12, bottom: 0, right: 0, background: '#14B860', borderRadius: '12px 3px 3px 3px' }} />
+        <div style={{ width: 26, height: 26, position: 'relative', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', width: 11, height: 11, top: 0, left: 0, background: '#14B860', borderRadius: '3px 3px 11px 3px' }} />
+          <div style={{ position: 'absolute', width: 11, height: 11, top: 0, right: 0, border: '1.5px solid #14B860', borderRadius: '3px 3px 3px 11px', boxSizing: 'border-box' }} />
+          <div style={{ position: 'absolute', width: 11, height: 11, bottom: 0, left: 0, border: '1.5px solid #14B860', borderRadius: '3px 11px 3px 3px', boxSizing: 'border-box' }} />
+          <div style={{ position: 'absolute', width: 11, height: 11, bottom: 0, right: 0, background: '#14B860', borderRadius: '11px 3px 3px 3px' }} />
         </div>
         <span style={{ fontWeight: 600, fontSize: 15, color: '#fff', letterSpacing: '0.02em', fontFamily: "'Outfit', sans-serif" }}>
           gestalt
@@ -80,16 +163,46 @@ export default function GalleryLiteSidebar({ activePage, onNavigate, venue }) {
       </div>
 
       {/* Nav */}
-      <div style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
-        {NAV.map(({ section, items }, si) => (
-          <div key={si}>
+      <div style={{ flex: 1, padding: '12px 0 8px', overflowY: 'auto' }}>
+        {NAV.map(({ section, sectionNum, items }, si) => (
+          <div key={si} style={{ marginBottom: section ? 4 : 0 }}>
             {section && (
               <div style={{
-                fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em',
-                textTransform: 'uppercase', padding: '12px 20px 6px',
-                fontWeight: 500, fontFamily: "'Outfit', sans-serif",
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 7,
+                padding: '14px 20px 5px',
               }}>
-                {section}
+                {/* Serif section number */}
+                <span style={{
+                  fontFamily: "'Newsreader', serif",
+                  fontSize: 11,
+                  fontWeight: 400,
+                  color: 'rgba(255,255,255,0.18)',
+                  lineHeight: 1,
+                  letterSpacing: '0.02em',
+                  flexShrink: 0,
+                }}>
+                  {sectionNum}
+                </span>
+                {/* Rule */}
+                <div style={{
+                  width: 10, height: 1,
+                  background: 'rgba(255,255,255,0.08)',
+                  flexShrink: 0,
+                  alignSelf: 'center',
+                }} />
+                {/* Section name */}
+                <span style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.25)',
+                  fontFamily: "'Outfit', sans-serif",
+                }}>
+                  {section}
+                </span>
               </div>
             )}
             {items.map(({ id, label, icon }) => {
@@ -99,18 +212,19 @@ export default function GalleryLiteSidebar({ activePage, onNavigate, venue }) {
                   key={id}
                   onClick={() => onNavigate(id)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '9px 20px', fontSize: 13, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 9,
+                    padding: '8px 20px', fontSize: 13, cursor: 'pointer',
                     fontFamily: "'Outfit', sans-serif",
-                    color: active ? '#fff' : 'rgba(255,255,255,0.5)',
-                    background: active ? 'rgba(20,184,96,0.08)' : 'transparent',
+                    color: active ? '#fff' : 'rgba(255,255,255,0.45)',
+                    background: active ? 'rgba(20,184,96,0.07)' : 'transparent',
                     borderLeft: `2px solid ${active ? '#14B860' : 'transparent'}`,
                     transition: 'all 0.15s',
+                    fontWeight: active ? 500 : 400,
                   }}
-                  onMouseEnter={e => { if (!active) { e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; } }}
-                  onMouseLeave={e => { if (!active) { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.background = 'transparent'; } }}
+                  onMouseEnter={e => { if (!active) { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; } }}
+                  onMouseLeave={e => { if (!active) { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'transparent'; } }}
                 >
-                  <div style={{ width: 16, height: 16, opacity: active ? 1 : 0.6, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ width: 15, height: 15, opacity: active ? 1 : 0.5, flexShrink: 0 }}>{icon}</div>
                   {label}
                 </div>
               );
@@ -119,39 +233,55 @@ export default function GalleryLiteSidebar({ activePage, onNavigate, venue }) {
         ))}
       </div>
 
-      {/* Tier pill */}
-      <div
-        onClick={() => onNavigate('plan-billing')}
-        style={{
-          margin: '0 12px 12px', padding: '8px 12px',
-          background: 'rgba(20,184,96,0.1)', border: '1px solid rgba(20,184,96,0.2)',
-          borderRadius: 6, cursor: 'pointer',
-        }}
-      >
-        <div style={{ fontSize: 11, fontWeight: 600, color: '#14B860', fontFamily: "'Outfit', sans-serif" }}>
-          {tierLabel(venue)}
-        </div>
-        <div style={{ fontSize: 10, color: 'rgba(20,184,96,0.7)', fontFamily: "'Outfit', sans-serif", marginTop: 2 }}>
-          {artworkUsageLabel(venue)}
-        </div>
-      </div>
+      {/* Tier tag — Edition Tag style */}
+      <TierTag venue={venue} onClick={() => onNavigate('plan-billing')} />
 
-      {/* Footer */}
+      {/* Footer — owner */}
       <div style={{
-        padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '11px 16px 14px',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex', alignItems: 'center', gap: 9,
       }}>
+        {/* Archive-mark style avatar */}
         <div style={{
-          width: 28, height: 28, borderRadius: '50%', background: '#D4AF37',
+          width: 28, height: 28,
+          border: '1px solid rgba(212,175,55,0.5)',
+          position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 600, color: '#111827', flexShrink: 0,
-          fontFamily: "'Outfit', sans-serif",
+          flexShrink: 0,
+          borderRadius: 2,
+          background: 'rgba(212,175,55,0.06)',
         }}>
-          {owner.initials || '?'}
+          {/* top + bottom inner rules */}
+          <div style={{ position: 'absolute', top: 2, left: 2, right: 2, height: 1, background: 'rgba(212,175,55,0.3)' }} />
+          <div style={{ position: 'absolute', bottom: 2, left: 2, right: 2, height: 1, background: 'rgba(212,175,55,0.3)' }} />
+          <span style={{
+            fontFamily: "'Newsreader', serif",
+            fontSize: 11, fontWeight: 600,
+            color: '#D4AF37',
+            letterSpacing: '0.02em',
+          }}>
+            {owner.initials || '?'}
+          </span>
         </div>
-        <div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: "'Outfit', sans-serif" }}>{owner.name || 'Gallery Owner'}</div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Outfit', sans-serif" }}>{owner.role || 'Owner'}</div>
+        <div style={{ overflow: 'hidden' }}>
+          <div style={{
+            fontSize: 12, color: 'rgba(255,255,255,0.7)',
+            fontFamily: "'Outfit', sans-serif",
+            fontWeight: 500,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {owner.name || 'Gallery Owner'}
+          </div>
+          <div style={{
+            fontSize: 9, color: 'rgba(255,255,255,0.25)',
+            fontFamily: "'Outfit', sans-serif",
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            marginTop: 1,
+          }}>
+            {owner.role || 'Owner'}
+          </div>
         </div>
       </div>
     </div>

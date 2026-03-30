@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const VENUE_TYPES = [
   { value: 'gallery',      label: 'Commercial gallery' },
@@ -97,17 +97,45 @@ function Step1({ data, onChange }) {
   );
 }
 
+const WAVEFORM = [6,10,14,8,16,12,10,14,8,6,12,10,16,8,12,14,10,6,14,12];
+const MOCK_DURATION = 24; // seconds
+
 // ── Step 2 ─────────────────────────────────────────────────────────────────────
 function Step2({ data, onChange }) {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0); // 0–100
   const fileRef = useRef();
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (playing) {
+      intervalRef.current = setInterval(() => {
+        setProgress(p => {
+          if (p >= 100) {
+            setPlaying(false);
+            clearInterval(intervalRef.current);
+            return 0;
+          }
+          return p + (100 / MOCK_DURATION / 10);
+        });
+      }, 100);
+    } else {
+      clearInterval(intervalRef.current);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [playing]);
+
+  function handleTogglePlay() {
+    if (progress >= 100) setProgress(0);
+    setPlaying(p => !p);
+  }
 
   function handleFile(file) {
     if (!file) return;
     const url = URL.createObjectURL(file);
-    onChange({ ...data, photoPreview: url });
+    onChange({ ...data, photoPreview: url, fileName: file.name });
     setGenerating(true);
     setGenerated(false);
     setTimeout(() => { setGenerating(false); setGenerated(true); }, 1500);
@@ -134,17 +162,29 @@ function Step2({ data, onChange }) {
         }}
       >
         {data.photoPreview ? (
-          <img src={data.photoPreview} alt="preview" style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 4 }} />
+          <img
+            src={data.photoPreview}
+            alt="preview"
+            style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 4 }}
+            onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+          />
+        ) : null}
+        {data.photoPreview ? (
+          <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 28 }}>🖼</div>
+            <div style={{ fontSize: 12, color: '#14B860', fontFamily: "'Outfit', sans-serif", fontWeight: 500 }}>{data.fileName}</div>
+            <div style={{ fontSize: 11, color: '#9CA3AF', fontFamily: "'Outfit', sans-serif" }}>Preview not available for HEIC</div>
+          </div>
         ) : (
           <>
             <div style={{ fontSize: 24, marginBottom: 8 }}>🖼</div>
             <div style={{ fontSize: 13, color: '#6B7280', fontFamily: "'Outfit', sans-serif" }}>
               Drag & drop a photo, or <span style={{ color: '#14B860', fontWeight: 500 }}>choose file</span>
             </div>
-            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, fontFamily: "'Outfit', sans-serif" }}>JPG or PNG</div>
+            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, fontFamily: "'Outfit', sans-serif" }}>JPG, PNG, or HEIC</div>
           </>
         )}
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png" style={{ display: 'none' }}
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif" style={{ display: 'none' }}
           onChange={e => handleFile(e.target.files[0])} />
       </div>
 
@@ -157,6 +197,17 @@ function Step2({ data, onChange }) {
       <label style={styles.label}>Year</label>
       <input style={styles.input} value={data.year} onChange={e => onChange({ ...data, year: e.target.value })} placeholder="Year created" />
 
+      <label style={styles.label}>Medium</label>
+      <input style={styles.input} value={data.medium || ''} onChange={e => onChange({ ...data, medium: e.target.value })} placeholder="e.g. Oil on canvas, Photography, Sculpture" />
+
+      <label style={styles.label}>Condition</label>
+      <select style={styles.input} value={data.condition || 'Good'} onChange={e => onChange({ ...data, condition: e.target.value })}>
+        {['Excellent', 'Good', 'Fair', 'Poor'].map(c => <option key={c}>{c}</option>)}
+      </select>
+
+      <label style={styles.label}>Location in venue</label>
+      <input style={styles.input} value={data.location || ''} onChange={e => onChange({ ...data, location: e.target.value })} placeholder="e.g. East Wall, Room 3" />
+
       {generating && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#F4F6F3', borderRadius: 8, marginTop: 12 }}>
           <div style={styles.spinner} />
@@ -166,22 +217,58 @@ function Step2({ data, onChange }) {
 
       {generated && descText && (
         <div style={{ background: '#E8F7EF', borderRadius: 8, padding: 16, marginTop: 12 }}>
+          <style>{`
+            @keyframes waveBar {
+              0%, 100% { transform: scaleY(1); }
+              50%       { transform: scaleY(1.9); }
+            }
+          `}</style>
           <p style={{ fontSize: 12, color: '#0D7A3E', fontFamily: "'Outfit', sans-serif", marginBottom: 12, lineHeight: 1.5 }}>
             {descText}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => setPlaying(p => !p)} style={{
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <button onClick={handleTogglePlay} style={{
               width: 32, height: 32, borderRadius: '50%', border: 'none',
               background: '#14B860', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, color: '#fff', flexShrink: 0,
+              fontSize: 13, color: '#fff', flexShrink: 0,
             }}>
               {playing ? '⏸' : '▶'}
             </button>
-            <div style={{ flex: 1, display: 'flex', gap: 2, alignItems: 'flex-end', height: 24 }}>
-              {[6,10,14,8,16,12,10,14,8,6,12,10,16,8,12,14,10,6,14,12].map((h, i) => (
-                <div key={i} style={{ flex: 1, height: h, background: playing ? '#14B860' : '#A7D9BC', borderRadius: 2 }} />
-              ))}
+            <div style={{ flex: 1, display: 'flex', gap: 3, alignItems: 'center', height: 28, overflow: 'hidden' }}>
+              {WAVEFORM.map((h, i) => {
+                const played = (i / WAVEFORM.length) * 100 < progress;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      width: 3,
+                      flexShrink: 0,
+                      height: h,
+                      background: played ? '#14B860' : '#A7D9BC',
+                      borderRadius: 2,
+                      transformOrigin: 'center',
+                      animation: playing ? `waveBar ${0.6 + (i % 4) * 0.15}s ease-in-out ${(i * 0.04).toFixed(2)}s infinite` : 'none',
+                    }}
+                  />
+                );
+              })}
             </div>
+            <span style={{ fontSize: 11, color: '#0D7A3E', fontFamily: "'Outfit', sans-serif", flexShrink: 0, minWidth: 32, textAlign: 'right' }}>
+              {playing || progress > 0
+                ? `${Math.floor((progress / 100) * MOCK_DURATION)}s`
+                : `${MOCK_DURATION}s`}
+            </span>
+          </div>
+          {/* Progress track */}
+          <div style={{ height: 3, background: 'rgba(13,122,62,0.15)', borderRadius: 2, cursor: 'pointer' }}
+            onClick={e => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+              setProgress(pct);
+              if (!playing) setPlaying(true);
+            }}
+          >
+            <div style={{ height: '100%', width: `${progress}%`, background: '#14B860', borderRadius: 2, transition: 'width 0.1s linear' }} />
           </div>
         </div>
       )}
@@ -309,16 +396,30 @@ function Step4({ recommendedTier, selectedPlan, onSelect }) {
 
 // ── Step 5 ─────────────────────────────────────────────────────────────────────
 function Step5({ venueName, onComplete }) {
+  const actions = [
+    {
+      label: 'Add your first 5 artworks',
+      btnLabel: 'Go to Artworks',
+      action: () => onComplete('artworks'),
+    },
+    {
+      label: 'Print a QR label and put it on your wall',
+      btnLabel: 'Print QR Label',
+      action: () => onComplete('qr-sharing'),
+    },
+    {
+      label: 'Preview your gallery in the Gestalt visitor app',
+      btnLabel: 'Preview as Visitor',
+      action: () => window.open('https://gestalt-17ce0.web.app/app', '_blank'),
+    },
+  ];
+
   return (
     <div>
       <h2 style={styles.stepHeading}>You're all set{venueName ? `, ${venueName}` : ''}.</h2>
       <p style={styles.stepSubheading}>Here's what to do first.</p>
 
-      {[
-        { label: 'Add your first 5 artworks', btnLabel: 'Go to Artworks', action: () => {} },
-        { label: 'Print a QR label and put it on your wall', btnLabel: 'Print QR Label', action: () => {} },
-        { label: 'Preview your gallery in the Gestalt visitor app', btnLabel: 'Preview as Visitor', action: () => window.open('https://gestalt-17ce0.web.app/app', '_blank') },
-      ].map(({ label, btnLabel, action }, i) => (
+      {actions.map(({ label, btnLabel, action }, i) => (
         <div key={i} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 0', borderBottom: '1px solid #F3F4F6',
@@ -338,7 +439,7 @@ function Step5({ venueName, onComplete }) {
         </div>
       ))}
 
-      <button onClick={onComplete} style={{
+      <button onClick={() => onComplete('gallery-home')} style={{
         ...styles.primaryBtn, width: '100%', marginTop: 28,
       }}>
         Open my dashboard
@@ -391,7 +492,7 @@ export default function OnboardingWizard({ onComplete }) {
   function handleBack() { setStep(s => Math.max(s - 1, 1)); }
   function handleSkip() { setStep(s => Math.min(s + 1, 5)); }
 
-  function handleComplete() {
+  function handleComplete(targetPage = 'gallery-home') {
     onComplete({
       name: step1Data.name,
       type: step1Data.type,
@@ -399,6 +500,7 @@ export default function OnboardingWizard({ onComplete }) {
       floorCount: parseInt(step1Data.floorCount) || 1,
       artworkCount: step2Data.title ? 1 : 0,
       onboardingComplete: true,
+      _targetPage: targetPage,
       owner: { name: '', role: 'Gallery Owner', initials: '' },
       plan: {
         artworkLimit: (selectedPlan || recommendedTier) === 'starter' ? 5 : (selectedPlan || recommendedTier) === 'gallery' ? 50 : null,
@@ -417,13 +519,13 @@ export default function OnboardingWizard({ onComplete }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, background: '#F4F6F3',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'Outfit', sans-serif", zIndex: 1000,
+      overflowY: 'auto', fontFamily: "'Outfit', sans-serif", zIndex: 1000,
+      padding: '40px 20px',
     }}>
       <div style={{
         width: '100%', maxWidth: 560, background: '#fff',
         borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.1)',
-        padding: 40, position: 'relative',
+        padding: 40, position: 'relative', margin: '0 auto',
       }}>
         {/* Progress bar */}
         <div style={{ marginBottom: 32 }}>

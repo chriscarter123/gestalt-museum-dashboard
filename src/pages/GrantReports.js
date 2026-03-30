@@ -29,6 +29,7 @@ export default function GrantReports() {
 
   return (
     <PageShell
+      eyebrow="Reporting"
       title="Grant reports"
       subtitle={`${institution.name} · ADA & accessibility reporting`}
     >

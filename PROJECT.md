@@ -241,16 +241,102 @@ src/
 
 ---
 
+## Firebase Architecture
+
+The dashboard shares the `gestalt-17ce0` Firebase project with the main museum-ar-app. Both apps read/write the same Firestore database and call the same Cloud Functions.
+
+### Auth — `src/firebase.js`
+Exports `auth` (Firebase Auth) and `db` (Firestore). Session is persisted automatically via `onAuthStateChanged`. Users are identified by `role: 'institution_admin'` in Firestore, distinguishing gallery owners from `role: 'visitor'` (museum-goer) accounts.
+
+### Firestore — `users/{uid}`
+```js
+{
+  uid, email, name, position, initials,
+  role: 'institution_admin',
+  accountType: 'institution',
+  onboardingComplete: false,        // set to true after wizard
+  createdAt: serverTimestamp(),
+  venue: null,                      // populated after onboarding
+}
+```
+
+### Cloud Functions (`museum-ar-app/functions/`)
+| Function | Trigger | Purpose |
+|---|---|---|
+| `classify` | HTTP POST | 3-stage artwork classification (Vision API + Claude) |
+| `submit` | HTTP POST | Submit artwork to Firestore |
+| `transcribe` | HTTP POST | Voice → structured extraction via Claude |
+| `describeArtwork` | HTTP POST | Generate visual description + audio script from images via Claude claude-sonnet-4-20250514 vision |
+| `checkBadges` | Firestore trigger | Award visitor badges on submission events |
+
+`ANTHROPIC_API_KEY` is stored in Firebase Secret Manager and injected at runtime — never in source code.
+
+---
+
+## ArtworkEditorModal — 7-tab editor
+
+**File:** `src/components/ArtworkEditorModal.js`
+
+Replaces the old single-panel add drawer. Used for both creating and editing artworks. Opens as a centered full-screen modal.
+
+| Tab | Key fields |
+|---|---|
+| Basic Info | Images (URL paste + file upload + drag-and-drop grid), AR Recognition Embeddings generator, Visual Description with **real AI generation** |
+| Classification | Title, artist, year, type, medium, dimensions, style, subject, tags |
+| Location | Gallery / floor / room, proximity radius, lat/lng |
+| Media | **AI-generated audio description** + animated waveform player, supplementary video/catalog/doc URLs |
+| Accessibility | ADA notes, mobility access, sensory notes, wheelchair info |
+| AR Anchor | Active toggle, anchor type, experience type, scan distance slider |
+| Museum Details | Accession number, acquisition date, provenance, condition, valuation, storage, exhibition history |
+
+**AI generation** (both buttons):
+1. Uploaded images converted from blob URL → base64 client-side
+2. URL images sent as-is
+3. Firebase Auth ID token fetched from `auth.currentUser.getIdToken()`
+4. POST to `describeArtwork` Cloud Function with `{ images, metadata }`
+5. Claude claude-sonnet-4-20250514 vision analyses images + metadata
+6. Returns `{ visualDescription, audioScript }` — applied to the appropriate field
+7. Error surfaces inline with retry available
+
+**In-place editing** uses a `localEdits` map in `Artworks.js`:
+- Editing existing artwork → patches `localEdits[id]` instead of appending
+- New artwork → calls `onArtworkAdded`
+- `artworksList` computed as `baseList.map(a => localEdits[a.id] ? { ...a, ...localEdits[a.id] } : a)`
+
+---
+
+## Editorial Design System — Session 5
+
+Visuals updated to match `museum-ar-app/design-system/badge-options.html`.
+
+### Tokens
+| Token | Value | Usage |
+|---|---|---|
+| Grid background | `rgba(17,24,39,0.025)` 40px | `body` via `index.css` |
+| Eyebrow label | 10px / 600 / 0.2em / uppercase | Page section headers |
+| Display serif | Newsreader 300 / -0.02em | All `h1` headings |
+| Dispatch badge | Dot · rule · uppercase text | `StatusBadge.js` |
+| Edition Tag | Left color strip + serif name | Tier badges in both sidebars |
+| Archive Mark | Double-rule rectangular border | User avatar in sidebar footer |
+
+### Components updated
+- **`Sidebar.js` + `GalleryLiteSidebar.js`** — Numbered serif section labels (`01 ─ CONTENT`), Edition Tag tier badges (gold=Institution, green=Gallery, muted=Free), Archive Mark avatar
+- **`PageShell.js`** — Tracking eyebrow prop, weight-300 serif `h1`, thin rule divider, outlined uppercase action button with hover fill-invert
+- **`StatusBadge.js`** — Rebuilt as Dispatch style: `6px dot · 1px rule · uppercase tracking text` inside thin-bordered pill
+- **`index.css`** — Editorial 40px grid background on `body`; scroll fix (`overflow:hidden` moved from `html` to `body, #root`)
+- **All Gallery Lite pages** — Backgrounds `#F4F6F3` → `#FCFCFC`, headers rebuilt with eyebrow + weight-300 serif + `1px rgba` rule
+
+---
+
 ## Planned — next milestones
 
 - [ ] Wire artworkService.js from museum-ar-app as real data source (Firestore)
-- [ ] Audio playback (Web Audio API) for published tracks
+- [ ] Audio playback (Web Audio API) with real TTS — currently waveform is animated mock
 - [ ] PDF export via jsPDF or server-side rendering
 - [ ] Multi-institution support (institution switcher in Sidebar footer)
-- [ ] Auth gate (Firebase anonymous -> staff SSO)
 - [ ] Mobile-responsive layout (currently desktop-first)
 - [ ] Real QR code generation (replace SVG placeholder)
-- [ ] Onboarding data persistence (currently resets on reload)
+- [ ] Upload images to Firebase Storage instead of blob URLs (enables persistence across sessions)
 
 ---
 
@@ -259,5 +345,8 @@ src/
 | Session | Date | Work |
 |---|---|---|
 | 1 | 2026-03-23 | Initial build — all 6 pages, shared components, mock data, full-width layout, GitHub push |
-| 2 | 2026-03-23 | Debugged Chrome blank page (webpack HMR WebSocket blocked at `0.0.0.0`); fixed with `HOST=localhost` in `.env`; switched to `npx serve -s build` as primary dev workflow; fixed `GrantReports.js` CSS string bug (stray quote in `fontFamily` value); confirmed full 6-page feature set against spec |
-| 3 | 2026-03-28 | Built Gallery Lite feature set per `gallery_lite_spec.md` — onboarding wizard (5 steps), venue tier system, Gallery Lite sidebar, 4 new pages (GalleryHome, QRSharing, VisitorInsights, PlanBilling), ExhibitionModal, artwork add drawer, tier routing in App.js, demo mode toggle, new StatusBadge variants, Sidebar tier badge, mockData venue/exhibitions additions |
+| 2 | 2026-03-23 | Debugged Chrome blank page (webpack HMR WebSocket blocked at `0.0.0.0`); fixed with `HOST=localhost` in `.env`; switched to `npx serve -s build` as primary dev workflow; fixed `GrantReports.js` CSS string bug; confirmed full 6-page feature set |
+| 3 | 2026-03-28 | Gallery Lite — onboarding wizard (5 steps), venue tier system, Gallery Lite sidebar, 4 new pages (GalleryHome, QRSharing, VisitorInsights, PlanBilling), ExhibitionModal, artwork add drawer, tier routing in App.js, demo mode toggle, new StatusBadge variants, Sidebar tier badge |
+| 4 | 2026-03-29 | Firebase Auth + Firestore — `RegistrationForm.js` (2-step: credentials → name/position), `LoginForm.js` (signIn, password reset), `firebase.js` (shared project `gestalt-17ce0`), `onAuthStateChanged` session persistence, `role: 'institution_admin'` in Firestore; `ArtworkEditorModal.js` — 7-tab editor (Basic Info, Classification, Location, Media, Accessibility, AR Anchor, Museum Details), animated waveform audio player, AR embeddings generator; bug fixes: scroll blocked on onboarding, edit saving as new artwork (localEdits map), Generate Audio button not appearing |
+| 5 | 2026-03-29 | Editorial visual redesign — 40px grid background in `index.css`; both sidebars rebuilt with numbered serif section labels, Edition Tag tier badges, Archive Mark avatars; `PageShell.js` editorial headers (tracking eyebrow + weight-300 serif + thin rule + outlined action button); Dispatch-style `StatusBadge`; all Gallery Lite + Institution page headers updated to match design system from `badge-options.html` |
+| 6 | 2026-03-29 | AI integration — `describeArtwork` Cloud Function deployed to `us-central1` using Claude claude-sonnet-4-20250514 vision; accepts up to 4 images (URL or base64) + artwork metadata; returns `visualDescription` + `audioScript`; ANTHROPIC_API_KEY stored in Firebase Secret Manager; dashboard wired with `callDescribeArtwork()` helper (blob→base64 conversion, Firebase auth token, fetch POST); "Generate from Images" and "Generate Audio" buttons now call real Claude API with inline error handling and loading states |

@@ -1,50 +1,87 @@
 import React from 'react';
 
-export default function PageShell({ title, subtitle, actionLabel, onAction, children }) {
+// Editorial page shell — tracking eyebrow + weight-300 serif heading + thin rule
+export default function PageShell({ eyebrow, title, subtitle, actionLabel, onAction, children }) {
   return (
     <div style={{
-      flex: 1, padding: '24px 28px', overflowY: 'auto', background: '#FCFCFC',
+      flex: 1, padding: '28px 32px 32px', overflowY: 'auto', background: '#FCFCFC',
     }}>
-      {/* Top bar */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between',
-        alignItems: 'flex-start', marginBottom: 24,
-      }}>
-        <div>
-          <div style={{
-            fontFamily: "'Newsreader', serif",
-            fontSize: 24, fontWeight: 600, color: '#111827',
-          }}>
-            {title}
+      {/* Header block */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          alignItems: 'flex-end', paddingBottom: 16,
+          borderBottom: '1px solid rgba(17,24,39,0.07)',
+        }}>
+          <div>
+            {/* Tracking eyebrow label */}
+            {eyebrow && (
+              <div style={{
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                color: 'rgba(17,24,39,0.35)',
+                fontFamily: "'Outfit', sans-serif",
+                marginBottom: 8,
+              }}>
+                {eyebrow}
+              </div>
+            )}
+            {/* Light serif heading */}
+            <h1 style={{
+              fontFamily: "'Newsreader', serif",
+              fontSize: 26,
+              fontWeight: 300,
+              color: '#111827',
+              margin: 0,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.1,
+            }}>
+              {title}
+            </h1>
+            {subtitle && (
+              <div style={{
+                fontSize: 13,
+                color: 'rgba(17,24,39,0.4)',
+                marginTop: 5,
+                fontFamily: "'Outfit', sans-serif",
+                lineHeight: 1.5,
+              }}>
+                {subtitle}
+              </div>
+            )}
           </div>
-          {subtitle && (
-            <div style={{ fontSize: 13, color: '#888', marginTop: 2, fontFamily: "'Outfit', sans-serif" }}>
-              {subtitle}
-            </div>
+
+          {/* Action button — editorial outlined style */}
+          {actionLabel && (
+            <button
+              onClick={onAction}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '8px 16px',
+                border: '1px solid #111827',
+                background: 'transparent',
+                color: '#111827',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+                borderRadius: 2,
+                transition: 'all 0.15s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#111827'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#111827'; }}
+            >
+              {actionLabel}
+            </button>
           )}
         </div>
-        {actionLabel && (
-          <button
-            onClick={onAction}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 6,
-              border: '1px solid rgba(20,184,96,0.3)',
-              background: 'rgba(20,184,96,0.04)', color: '#14B860',
-              fontSize: 12, fontWeight: 500, cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif",
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(20,184,96,0.1)'; e.currentTarget.style.borderColor = '#14B860'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(20,184,96,0.04)'; e.currentTarget.style.borderColor = 'rgba(20,184,96,0.3)'; }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <path d="M4 12v2h8v-2"/><path d="M8 2v8"/><path d="M5 7l3 3 3-3"/>
-            </svg>
-            {actionLabel}
-          </button>
-        )}
       </div>
+
       {children}
     </div>
   );

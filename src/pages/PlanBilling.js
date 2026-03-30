@@ -38,11 +38,28 @@ export default function PlanBilling({ venue }) {
   const pct = usagePct(artworkCount, artworkLimit);
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#F4F6F3', padding: 32, fontFamily: "'Outfit', sans-serif" }}>
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: "'Newsreader', serif", fontSize: 28, fontWeight: 400, color: '#111827', margin: 0 }}>Plan & Billing</h1>
-        <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>Manage your Gestalt subscription</div>
+    <div style={{ flex: 1, overflowY: 'auto', background: '#FCFCFC', padding: '28px 32px 32px', fontFamily: "'Outfit', sans-serif" }}>
+      {/* Header — editorial */}
+      <div style={{
+        paddingBottom: 18, marginBottom: 24,
+        borderBottom: '1px solid rgba(17,24,39,0.07)',
+      }}>
+        <div style={{
+          fontSize: 10, fontWeight: 600, letterSpacing: '0.2em',
+          textTransform: 'uppercase', color: 'rgba(17,24,39,0.35)',
+          fontFamily: "'Outfit', sans-serif", marginBottom: 8,
+        }}>
+          Account
+        </div>
+        <h1 style={{
+          fontFamily: "'Newsreader', serif", fontSize: 26, fontWeight: 300,
+          color: '#111827', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1,
+        }}>
+          Plan & Billing
+        </h1>
+        <div style={{ fontSize: 13, color: 'rgba(17,24,39,0.4)', marginTop: 5, fontFamily: "'Outfit', sans-serif" }}>
+          Manage your Gestalt subscription
+        </div>
       </div>
 
       {/* Current plan card */}

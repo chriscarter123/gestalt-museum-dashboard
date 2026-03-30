@@ -1,7 +1,12 @@
-import React, { useState, Component } from 'react';
+import React, { useState, useEffect, Component } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import Sidebar from './components/Sidebar';
 import GalleryLiteSidebar from './components/GalleryLiteSidebar';
 import OnboardingWizard from './components/OnboardingWizard';
+import RegistrationForm from './components/RegistrationForm';
+import LoginForm from './components/LoginForm';
 import ExhibitionModal from './components/ExhibitionModal';
 import ADAScorecard from './pages/ADAScorecard';
 import VisitorAnalytics from './pages/VisitorAnalytics';
@@ -15,6 +20,9 @@ import VisitorInsights from './pages/VisitorInsights';
 import PlanBilling from './pages/PlanBilling';
 import * as mockData from './data/mockData';
 
+const IS_ONBOARDING_URL = window.location.pathname.includes('/onboarding');
+
+// ── Error Boundary ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
@@ -31,7 +39,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-function InstitutionPage({ page, venue, artworks, exhibitions, onArtworkAdded }) {
+function InstitutionPage({ page }) {
   switch (page) {
     case 'ada':       return <ADAScorecard />;
     case 'analytics': return <VisitorAnalytics />;
@@ -43,30 +51,129 @@ function InstitutionPage({ page, venue, artworks, exhibitions, onArtworkAdded })
   }
 }
 
-function GalleryLitePage({ page, venue, artworks, exhibitions, onNavigate, onNewExhibition, onArtworkAdded }) {
+function GalleryLitePage({ page, venue, artworks, exhibitions, onNavigate, onNewExhibition, onArtworkAdded, onVenueUpdate }) {
   switch (page) {
-    case 'gallery-home':     return <GalleryHome venue={venue} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} />;
+    case 'gallery-home':     return <GalleryHome venue={venue} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} onVenueUpdate={onVenueUpdate} />;
     case 'artworks':         return <Artworks venue={venue} artworks={artworks} onArtworkAdded={onArtworkAdded} />;
     case 'qr-sharing':       return <QRSharing venue={venue} artworks={artworks} />;
     case 'visitor-insights': return <VisitorInsights venue={venue} />;
     case 'plan-billing':     return <PlanBilling venue={venue} />;
-    default:                 return <GalleryHome venue={venue} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} />;
+    default:                 return <GalleryHome venue={venue} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} onVenueUpdate={onVenueUpdate} />;
   }
 }
 
+// ── Loading screen ─────────────────────────────────────────────────────────
+function LoadingScreen() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: '#F4F6F3',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Outfit', sans-serif",
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        <div style={{ width: 28, height: 28, position: 'relative', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', width: 12, height: 12, top: 0, left: 0, background: '#14B860', borderRadius: '3px 3px 12px 3px' }} />
+          <div style={{ position: 'absolute', width: 12, height: 12, top: 0, right: 0, border: '1.5px solid #14B860', borderRadius: '3px 3px 3px 12px', boxSizing: 'border-box' }} />
+          <div style={{ position: 'absolute', width: 12, height: 12, bottom: 0, left: 0, border: '1.5px solid #14B860', borderRadius: '3px 12px 3px 3px', boxSizing: 'border-box' }} />
+          <div style={{ position: 'absolute', width: 12, height: 12, bottom: 0, right: 0, background: '#14B860', borderRadius: '12px 3px 3px 3px' }} />
+        </div>
+        <span style={{ fontWeight: 600, fontSize: 16, color: '#111827', letterSpacing: '0.02em' }}>gestalt</span>
+      </div>
+      <div style={{
+        width: 20, height: 20, borderRadius: '50%',
+        border: '2px solid #E5E7EB', borderTopColor: '#14B860',
+        animation: 'spin 0.7s linear infinite',
+      }} />
+    </div>
+  );
+}
+
+// ── App ────────────────────────────────────────────────────────────────────
 export default function App() {
+  // 'checking' while Firebase resolves the session | 'login' | 'register' | 'authenticated'
+  const [authScreen, setAuthScreen] = useState(IS_ONBOARDING_URL ? 'checking' : 'authenticated');
+  const [userProfile, setUserProfile] = useState(null); // Firestore user doc
+
   const [page, setPage] = useState('ada');
-  const [venue, setVenue] = useState(mockData.venue);
+  const [venue, setVenue] = useState(IS_ONBOARDING_URL ? mockData.venueGalleryDemo : mockData.venue);
   const [exhibitions, setExhibitions] = useState(mockData.exhibitions);
   const [artworks, setArtworks] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
 
-  const isInstitution = venue.tier === 'institution';
-  const onboardingComplete = venue.onboardingComplete;
+  // ── Firebase session check ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!IS_ONBOARDING_URL) return;
 
-  function handleOnboardingComplete(venueData) {
-    setVenue(prev => ({ ...prev, ...venueData }));
-    setPage('gallery-home');
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Already logged in — fetch their Firestore profile
+        try {
+          const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const profile = snap.exists() ? snap.data() : { uid: firebaseUser.uid, email: firebaseUser.email };
+          setUserProfile(profile);
+          applyProfile(profile);
+          setAuthScreen('authenticated');
+        } catch {
+          setAuthScreen('login');
+        }
+      } else {
+        // No session — show login if they've registered before, else registration
+        setAuthScreen('login');
+      }
+    });
+
+    return unsubscribe;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyProfile(profile) {
+    setVenue(prev => ({
+      ...prev,
+      onboardingComplete: profile.onboardingComplete || false,
+      owner: {
+        name: profile.name || '',
+        role: profile.position || '',
+        initials: profile.initials || '',
+      },
+    }));
+    if (profile.onboardingComplete) setPage('gallery-home');
+  }
+
+  // ── Auth handlers ────────────────────────────────────────────────────────
+  function handleRegistered({ uid, email, name, position, initials }) {
+    const profile = { uid, email, name, position, initials, onboardingComplete: false };
+    setUserProfile(profile);
+    setVenue(prev => ({ ...prev, owner: { name, role: position, initials } }));
+    setAuthScreen('authenticated');
+  }
+
+  function handleLoggedIn(profile) {
+    setUserProfile(profile);
+    applyProfile(profile);
+    setAuthScreen('authenticated');
+  }
+
+  // ── App handlers ─────────────────────────────────────────────────────────
+  async function handleOnboardingComplete(venueData) {
+    const { _targetPage, ...rest } = venueData;
+    setVenue(prev => ({ ...prev, ...rest }));
+    setPage(_targetPage || 'gallery-home');
+
+    // Persist onboarding completion + venue snapshot to Firestore
+    if (userProfile?.uid) {
+      try {
+        await updateDoc(doc(db, 'users', userProfile.uid), {
+          onboardingComplete: true,
+          venue: {
+            name: rest.name || '',
+            type: rest.type || '',
+            tier: rest.tier || 'starter',
+            floorCount: rest.floorCount || 1,
+          },
+        });
+      } catch (e) {
+        console.warn('Could not persist onboarding to Firestore:', e);
+      }
+    }
   }
 
   function handleArtworkAdded(artwork) {
@@ -90,12 +197,36 @@ export default function App() {
     setPage('ada');
   }
 
-  // ── Onboarding ──────────────────────────────────────────────────────────────
+  // ── Auth screens ─────────────────────────────────────────────────────────
+  if (authScreen === 'checking') return <LoadingScreen />;
+
+  if (authScreen === 'login') {
+    return (
+      <LoginForm
+        onLoggedIn={handleLoggedIn}
+        onShowRegister={() => setAuthScreen('register')}
+      />
+    );
+  }
+
+  if (authScreen === 'register') {
+    return (
+      <RegistrationForm
+        onRegistered={handleRegistered}
+        onShowLogin={() => setAuthScreen('login')}
+      />
+    );
+  }
+
+  const onboardingComplete = venue.onboardingComplete;
+  const isInstitution = venue.tier === 'institution';
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
   if (!onboardingComplete) {
     return <OnboardingWizard onComplete={handleOnboardingComplete} />;
   }
 
-  // ── Institution tier ────────────────────────────────────────────────────────
+  // ── Institution tier ──────────────────────────────────────────────────────
   if (isInstitution) {
     return (
       <div style={{
@@ -103,7 +234,6 @@ export default function App() {
         overflow: 'hidden', background: '#FCFCFC', fontFamily: "'Outfit', sans-serif",
       }}>
         <ErrorBoundary>
-          {/* Demo mode toggle */}
           <div style={{ position: 'absolute', top: 14, right: 20, zIndex: 50 }}>
             <button
               onClick={switchToGalleryLiteDemo}
@@ -116,17 +246,14 @@ export default function App() {
               Preview Gallery Lite
             </button>
           </div>
-
           <Sidebar activePage={page} onNavigate={setPage} />
-          <ErrorBoundary>
-            <InstitutionPage page={page} />
-          </ErrorBoundary>
+          <ErrorBoundary><InstitutionPage page={page} /></ErrorBoundary>
         </ErrorBoundary>
       </div>
     );
   }
 
-  // ── Gallery Lite tier ───────────────────────────────────────────────────────
+  // ── Gallery Lite tier ─────────────────────────────────────────────────────
   return (
     <div style={{
       display: 'flex', width: '100vw', height: '100vh',
@@ -134,7 +261,6 @@ export default function App() {
       position: 'relative',
     }}>
       <ErrorBoundary>
-        {/* Demo mode banner */}
         {venue.id === 'venue_demo' && (
           <div style={{
             position: 'absolute', top: 0, left: 220, right: 0, zIndex: 50,
@@ -163,6 +289,7 @@ export default function App() {
               onNavigate={setPage}
               onNewExhibition={() => setActiveModal('new-exhibition')}
               onArtworkAdded={handleArtworkAdded}
+              onVenueUpdate={data => setVenue(v => ({ ...v, ...data }))}
             />
           </div>
         </ErrorBoundary>

@@ -37,6 +37,7 @@ export default function ARAnchors() {
 
   return (
     <PageShell
+      eyebrow="Technology"
       title="AR anchors"
       subtitle={`${institution.name} · Recognition reliability`}
       actionLabel="Run calibration"

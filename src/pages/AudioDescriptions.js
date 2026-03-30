@@ -21,6 +21,7 @@ export default function AudioDescriptions() {
 
   return (
     <PageShell
+      eyebrow="Accessibility"
       title="Audio descriptions"
       subtitle={`${institution.name} · Coverage overview`}
       actionLabel="Generate missing"

@@ -11,6 +11,7 @@ export default function VisitorAnalytics() {
 
   return (
     <PageShell
+      eyebrow="Analytics"
       title="Visitor analytics"
       subtitle={`${institution.name} · Live data`}
       actionLabel="Export CSV"

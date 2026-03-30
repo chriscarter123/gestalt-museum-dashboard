@@ -32,6 +32,7 @@ export default function ADAScorecard() {
 
   return (
     <PageShell
+      eyebrow="Accessibility"
       title="ADA accessibility scorecard"
       subtitle={`${institution.name} · Updated ${institution.lastUpdated}`}
       actionLabel="Export PDF"

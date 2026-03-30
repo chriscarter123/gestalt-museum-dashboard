@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import StatusBadge from '../components/StatusBadge';
 import PageShell from '../components/PageShell';
+import ArtworkEditorModal from '../components/ArtworkEditorModal';
 import { institution, artworksList as defaultArtworksList } from '../data/mockData';
 
 const STATUS_STYLES = {
@@ -12,6 +13,7 @@ const STATUS_STYLES = {
 
 const ALL_STATUSES  = ['All statuses', 'active', 'unverified', 'deteriorating'];
 
+
 function ARScoreBar({ score }) {
   const color = score >= 0.8 ? '#14B860' : score >= 0.6 ? '#D4AF37' : '#E24B4A';
   return (
@@ -20,147 +22,6 @@ function ARScoreBar({ score }) {
         <div style={{ width: `${score * 100}%`, height: '100%', background: color, borderRadius: 3 }} />
       </div>
       <span style={{ fontSize: 11, color: '#888', fontFamily: "'Outfit', sans-serif" }}>{score}</span>
-    </div>
-  );
-}
-
-// ── Add Artwork Drawer ─────────────────────────────────────────────────────────
-function AddArtworkDrawer({ onClose, onSave }) {
-  const [form, setForm] = useState({ title: '', artist: '', year: '', medium: '', condition: 'Good', location: '', photoPreview: null });
-  const [generating, setGenerating] = useState(false);
-  const [generated, setGenerated] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const fileRef = useRef();
-
-  function handleFile(file) {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setForm(f => ({ ...f, photoPreview: url }));
-    setGenerating(true);
-    setGenerated(false);
-    setTimeout(() => { setGenerating(false); setGenerated(true); }, 1500);
-  }
-
-  function handleSubmit() {
-    if (!form.title.trim()) return;
-    onSave({
-      id: `ART-NEW-${Date.now()}`,
-      title: form.title.trim(),
-      artist: form.artist.trim() || 'Unknown',
-      gallery: form.location.trim() || 'Main Gallery',
-      type: form.medium.trim() || 'Artwork',
-      hasAudio: generated,
-      arScore: 0.5,
-      status: 'active',
-    });
-  }
-
-  const descText = form.title
-    ? `${form.title} by ${form.artist || 'Unknown'}, ${form.year || 'date unknown'}. A captivating work that draws the viewer into its composition through deliberate use of form and color.`
-    : null;
-
-  return (
-    <div style={{
-      position: 'absolute', right: 0, top: 0, height: '100%', width: 420,
-      background: '#fff', borderLeft: '1px solid #E5E7EB', zIndex: 100,
-      display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 20px rgba(0,0,0,0.08)',
-    }}>
-      {/* Drawer header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #F3F4F6' }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#111827', fontFamily: "'Outfit', sans-serif" }}>Add Artwork</div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#9CA3AF' }}>×</button>
-      </div>
-
-      {/* Drawer body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-        {/* Photo upload */}
-        <div
-          onClick={() => fileRef.current.click()}
-          onDragOver={e => e.preventDefault()}
-          onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
-          style={{
-            border: '2px dashed #E5E7EB', borderRadius: 8, padding: 20,
-            textAlign: 'center', cursor: 'pointer', marginBottom: 16, background: '#F9FAFB',
-          }}
-        >
-          {form.photoPreview ? (
-            <img src={form.photoPreview} alt="preview" style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 4 }} />
-          ) : (
-            <>
-              <div style={{ fontSize: 22, marginBottom: 6 }}>🖼</div>
-              <div style={{ fontSize: 13, color: '#6B7280', fontFamily: "'Outfit', sans-serif" }}>
-                Drag & drop, or <span style={{ color: '#14B860', fontWeight: 500 }}>choose file</span>
-              </div>
-            </>
-          )}
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png" style={{ display: 'none' }}
-            onChange={e => handleFile(e.target.files[0])} />
-        </div>
-
-        {generating && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#F4F6F3', borderRadius: 8, marginBottom: 16 }}>
-            <div style={spinnerStyle} />
-            <span style={{ fontSize: 12, color: '#6B7280', fontFamily: "'Outfit', sans-serif" }}>Generating audio description…</span>
-          </div>
-        )}
-
-        {generated && descText && (
-          <div style={{ background: '#E8F7EF', borderRadius: 8, padding: 14, marginBottom: 16 }}>
-            <p style={{ fontSize: 11, color: '#0D7A3E', fontFamily: "'Outfit', sans-serif", marginBottom: 10, lineHeight: 1.5 }}>{descText}</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button onClick={() => setPlaying(p => !p)} style={{
-                width: 28, height: 28, borderRadius: '50%', border: 'none',
-                background: '#14B860', cursor: 'pointer', color: '#fff', fontSize: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                {playing ? '⏸' : '▶'}
-              </button>
-              <div style={{ flex: 1, display: 'flex', gap: 2, alignItems: 'flex-end', height: 20 }}>
-                {[5,8,12,7,14,10,8,12,7,5,10,8,14,7,10,12,8,5,12,10].map((h, i) => (
-                  <div key={i} style={{ flex: 1, height: h, background: playing ? '#14B860' : '#A7D9BC', borderRadius: 2 }} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <label style={S.label}>Title <span style={{ color: '#E24B4A' }}>*</span></label>
-        <input style={S.input} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Artwork title" />
-
-        <label style={S.label}>Artist</label>
-        <input style={S.input} value={form.artist} onChange={e => setForm(f => ({ ...f, artist: e.target.value }))} placeholder="Artist name" />
-
-        <label style={S.label}>Year</label>
-        <input style={S.input} value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))} placeholder="Year created" />
-
-        <label style={S.label}>Medium</label>
-        <input style={S.input} value={form.medium} onChange={e => setForm(f => ({ ...f, medium: e.target.value }))} placeholder="e.g. Oil on canvas, Photography, Sculpture" />
-
-        <label style={S.label}>Condition</label>
-        <select style={S.input} value={form.condition} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))}>
-          {['Excellent', 'Good', 'Fair', 'Poor'].map(c => <option key={c}>{c}</option>)}
-        </select>
-
-        <label style={S.label}>Location in venue</label>
-        <input style={{ ...S.input, marginBottom: 0 }} value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. East Wall, Room 3" />
-      </div>
-
-      {/* Drawer footer */}
-      <div style={{ padding: '16px 24px', borderTop: '1px solid #F3F4F6' }}>
-        <button
-          onClick={handleSubmit}
-          disabled={!form.title.trim()}
-          style={{
-            width: '100%', padding: '10px 0', background: '#111827', color: '#fff',
-            border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 500,
-            cursor: form.title.trim() ? 'pointer' : 'not-allowed',
-            opacity: form.title.trim() ? 1 : 0.4,
-            fontFamily: "'Outfit', sans-serif",
-          }}
-        >
-          Save Artwork
-        </button>
-      </div>
     </div>
   );
 }
@@ -199,10 +60,15 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
   const [type, setType]       = useState('All types');
   const [status, setStatus]   = useState('All statuses');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null); // null = new, object = existing
 
-  // Use external artworks if provided (Gallery Lite mode), else use default mock list
+  // localEdits stores in-place edits keyed by artwork id
+  const [localEdits, setLocalEdits] = useState({});
+
   const isLiteMode = !!venue;
-  const artworksList = isLiteMode ? (externalArtworks || []) : defaultArtworksList;
+  // Base list from props or mock; apply any local edits on top
+  const baseList = isLiteMode ? (externalArtworks || []) : defaultArtworksList;
+  const artworksList = baseList.map(a => localEdits[a.id] ? { ...a, ...localEdits[a.id] } : a);
 
   const isAtLimit = isLiteMode && venue?.tier === 'starter' && artworksList.length >= (venue?.plan?.artworkLimit || 5);
 
@@ -224,16 +90,34 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
   };
 
   function handleSaveArtwork(artwork) {
-    if (onArtworkAdded) onArtworkAdded(artwork);
+    if (editTarget) {
+      // In-place update — patch only this artwork in the list
+      setLocalEdits(prev => ({ ...prev, [artwork.id]: artwork }));
+    } else {
+      // Brand new artwork — bubble up so App.js state (and the count) stays in sync
+      if (onArtworkAdded) onArtworkAdded(artwork);
+    }
     setDrawerOpen(false);
+    setEditTarget(null);
+  }
+
+  function openNewArtwork() {
+    setEditTarget(null);
+    setDrawerOpen(true);
+  }
+
+  function openEditArtwork(a) {
+    setEditTarget(a);
+    setDrawerOpen(true);
   }
 
   return (
     <PageShell
+      eyebrow={isLiteMode ? 'Content' : 'Collection'}
       title="Artworks"
       subtitle={isLiteMode ? `${venue?.name || 'Your gallery'} · ${artworksList.length} artworks` : `${institution.name} · ${defaultArtworksList.length} artworks`}
       actionLabel={isAtLimit ? null : "+ Add artwork"}
-      onAction={isAtLimit ? null : () => setDrawerOpen(true)}
+      onAction={isAtLimit ? null : openNewArtwork}
     >
       <div style={{ position: 'relative' }}>
         {/* Tier limit banner */}
@@ -256,7 +140,7 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
         )}
 
         {artworksList.length === 0 ? (
-          <EmptyState onAdd={() => setDrawerOpen(true)} />
+          <EmptyState onAdd={openNewArtwork} />
         ) : (
           <>
             {/* Summary strip */}
@@ -330,11 +214,13 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
                         <StatusBadge label={s.label} dir={s.dir} size={10} />
                       </td>
                       <td style={{ padding: '9px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)' }}>
-                        <button style={{
-                          padding: '3px 10px', borderRadius: 5, border: '0.5px solid rgba(0,0,0,0.1)',
-                          background: 'transparent', color: '#888', fontSize: 11,
-                          cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
-                        }}>Edit</button>
+                        <button
+                          onClick={() => openEditArtwork(a)}
+                          style={{
+                            padding: '3px 10px', borderRadius: 5, border: '0.5px solid rgba(0,0,0,0.1)',
+                            background: 'transparent', color: '#888', fontSize: 11,
+                            cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                          }}>Edit</button>
                       </td>
                     </tr>
                   );
@@ -349,10 +235,11 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
           </>
         )}
 
-        {/* Add Artwork Drawer */}
+        {/* Artwork Editor Modal */}
         {drawerOpen && (
-          <AddArtworkDrawer
-            onClose={() => setDrawerOpen(false)}
+          <ArtworkEditorModal
+            artwork={editTarget}
+            onClose={() => { setDrawerOpen(false); setEditTarget(null); }}
             onSave={handleSaveArtwork}
           />
         )}
@@ -361,20 +248,3 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
   );
 }
 
-const S = {
-  label: {
-    display: 'block', fontSize: 12, fontWeight: 500, color: '#374151',
-    fontFamily: "'Outfit', sans-serif", marginBottom: 6,
-  },
-  input: {
-    width: '100%', padding: '9px 12px', borderRadius: 6, fontSize: 13,
-    border: '1.5px solid #E5E7EB', fontFamily: "'Outfit', sans-serif",
-    outline: 'none', marginBottom: 14, boxSizing: 'border-box', color: '#111827', background: '#fff',
-  },
-};
-
-const spinnerStyle = {
-  width: 14, height: 14, borderRadius: '50%',
-  border: '2px solid #E5E7EB', borderTopColor: '#14B860',
-  animation: 'spin 0.7s linear infinite', flexShrink: 0,
-};

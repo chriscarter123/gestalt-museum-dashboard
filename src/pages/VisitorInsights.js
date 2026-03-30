@@ -78,21 +78,41 @@ export default function VisitorInsights({ venue }) {
   if (venue?.tier === 'starter') return <LockedState />;
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#F4F6F3', padding: 32, fontFamily: "'Outfit', sans-serif" }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+    <div style={{ flex: 1, overflowY: 'auto', background: '#FCFCFC', padding: '28px 32px 32px', fontFamily: "'Outfit', sans-serif" }}>
+      {/* Header — editorial */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        paddingBottom: 18, marginBottom: 24,
+        borderBottom: '1px solid rgba(17,24,39,0.07)',
+      }}>
         <div>
-          <h1 style={{ fontFamily: "'Newsreader', serif", fontSize: 28, fontWeight: 400, color: '#111827', margin: 0 }}>Visitor Insights</h1>
-          <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>{venue?.name || 'Your venue'}</div>
+          <div style={{
+            fontSize: 10, fontWeight: 600, letterSpacing: '0.2em',
+            textTransform: 'uppercase', color: 'rgba(17,24,39,0.35)',
+            fontFamily: "'Outfit', sans-serif", marginBottom: 8,
+          }}>
+            Insights
+          </div>
+          <h1 style={{
+            fontFamily: "'Newsreader', serif", fontSize: 26, fontWeight: 300,
+            color: '#111827', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1,
+          }}>
+            Visitor Insights
+          </h1>
+          <div style={{ fontSize: 13, color: 'rgba(17,24,39,0.4)', marginTop: 5, fontFamily: "'Outfit', sans-serif" }}>
+            {venue?.name || 'Your venue'}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 0, border: '1.5px solid #E5E7EB', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: 0, border: '1px solid rgba(17,24,39,0.12)', borderRadius: 2, overflow: 'hidden' }}>
           {RANGES.map(r => (
             <button key={r} onClick={() => setRange(r)} style={{
-              padding: '7px 14px', fontSize: 12, cursor: 'pointer', border: 'none',
-              fontFamily: "'Outfit', sans-serif", fontWeight: 500,
-              borderRight: r !== RANGES[RANGES.length - 1] ? '1px solid #E5E7EB' : 'none',
-              background: range === r ? '#111827' : '#fff',
-              color: range === r ? '#fff' : '#6B7280',
+              padding: '7px 14px', fontSize: 11, cursor: 'pointer', border: 'none',
+              fontFamily: "'Outfit', sans-serif", fontWeight: 600,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              borderRight: r !== RANGES[RANGES.length - 1] ? '1px solid rgba(17,24,39,0.1)' : 'none',
+              background: range === r ? '#111827' : 'transparent',
+              color: range === r ? '#fff' : 'rgba(17,24,39,0.45)',
+              transition: 'all 0.15s',
             }}>
               {r}
             </button>
