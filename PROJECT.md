@@ -28,6 +28,29 @@ npx serve -s build -l 3001
 
 ---
 
+## Deployment
+
+**Live URL:** https://gestalt-17ce0.web.app/institutions/
+
+The dashboard is deployed via Firebase Hosting in the `museum-ar-app` project. The build output is copied into `museum-ar-app/deploy/institutions/` and served under the `/institutions/**` rewrite rule.
+
+```bash
+# 1. Build the dashboard
+npm run build
+
+# 2. Copy build output to the Firebase deploy folder
+cp -r build/. ../museum-ar-app/deploy/institutions/
+
+# 3. Deploy from museum-ar-app
+cd ../museum-ar-app
+firebase deploy --only hosting
+```
+
+> Firebase project: `gestalt-17ce0` (shared with `museum-ar-app` and the visitor AR app)
+
+
+---
+
 ## Pages
 
 ### ADA Scorecard
