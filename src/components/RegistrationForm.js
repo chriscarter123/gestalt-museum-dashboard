@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import GestaltLogo from './GestaltLogo';
 
 const POSITIONS = [
   'Gallery Owner / Director',
@@ -15,19 +16,6 @@ const POSITIONS = [
   'Other',
 ];
 
-function GestaltLogo() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginBottom: 32 }}>
-      <div style={{ width: 32, height: 32, position: 'relative', flexShrink: 0 }}>
-        <div style={{ position: 'absolute', width: 14, height: 14, top: 0, left: 0, background: '#14B860', borderRadius: '3px 3px 14px 3px' }} />
-        <div style={{ position: 'absolute', width: 14, height: 14, top: 0, right: 0, border: '1.8px solid #14B860', borderRadius: '3px 3px 3px 14px', boxSizing: 'border-box' }} />
-        <div style={{ position: 'absolute', width: 14, height: 14, bottom: 0, left: 0, border: '1.8px solid #14B860', borderRadius: '3px 14px 3px 3px', boxSizing: 'border-box' }} />
-        <div style={{ position: 'absolute', width: 14, height: 14, bottom: 0, right: 0, background: '#14B860', borderRadius: '14px 3px 3px 3px' }} />
-      </div>
-      <span style={{ fontWeight: 600, fontSize: 18, color: '#111827', letterSpacing: '0.02em', fontFamily: "'Outfit', sans-serif" }}>gestalt</span>
-    </div>
-  );
-}
 
 function StepDots({ step }) {
   return (
@@ -153,7 +141,9 @@ export default function RegistrationForm({ onRegistered, onShowLogin }) {
         width: '100%', maxWidth: 440, background: '#fff', margin: '0 auto',
         borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.1)', padding: '40px 40px 36px',
       }}>
-        <GestaltLogo />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+          <GestaltLogo height={32} variant="dark" />
+        </div>
         <StepDots step={step} />
         <h1 style={{ fontFamily: "'Newsreader', serif", fontSize: 26, fontWeight: 400, color: '#111827', margin: '0 0 6px', textAlign: 'center' }}>
           {heading}

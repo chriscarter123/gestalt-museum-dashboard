@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import GestaltLogo from '../components/GestaltLogo';
 
 // A deterministic fake QR grid pattern using a fixed seed
 const QR_PATTERN = [
@@ -280,11 +281,8 @@ export default function QRSharing({ venue, artworks }) {
               position: 'relative', margin: '0 auto 12px',
             }}>
               {/* Gestalt logo mark */}
-              <div style={{ position: 'absolute', bottom: 16, right: 16, width: 20, height: 20 }}>
-                <div style={{ position: 'absolute', width: 8, height: 8, top: 0, left: 0, background: '#14B860', borderRadius: '2px 2px 8px 2px' }} />
-                <div style={{ position: 'absolute', width: 8, height: 8, top: 0, right: 0, border: '1px solid #14B860', borderRadius: '2px 2px 2px 8px', boxSizing: 'border-box' }} />
-                <div style={{ position: 'absolute', width: 8, height: 8, bottom: 0, left: 0, border: '1px solid #14B860', borderRadius: '2px 8px 2px 2px', boxSizing: 'border-box' }} />
-                <div style={{ position: 'absolute', width: 8, height: 8, bottom: 0, right: 0, background: '#14B860', borderRadius: '8px 2px 2px 2px' }} />
+              <div style={{ position: 'absolute', bottom: 16, right: 16 }}>
+                <GestaltLogo height={20} iconOnly />
               </div>
               <div style={{
                 fontSize: 22, fontWeight: 400, color: '#fff', fontFamily: "'Newsreader', serif",

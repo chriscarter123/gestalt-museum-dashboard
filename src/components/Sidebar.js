@@ -1,5 +1,6 @@
 import React from 'react';
 import { institution } from '../data/mockData';
+import GestaltLogo from './GestaltLogo';
 
 const NAV = [
   {
@@ -56,19 +57,10 @@ export default function Sidebar({ activePage, onNavigate }) {
     }}>
       {/* Logo */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
         padding: '22px 20px 18px',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
-        <div style={{ width: 26, height: 26, position: 'relative', flexShrink: 0 }}>
-          <div style={{ position: 'absolute', width: 11, height: 11, top: 0, left: 0, background: '#14B860', borderRadius: '3px 3px 11px 3px' }} />
-          <div style={{ position: 'absolute', width: 11, height: 11, top: 0, right: 0, border: '1.5px solid #14B860', borderRadius: '3px 3px 3px 11px', boxSizing: 'border-box' }} />
-          <div style={{ position: 'absolute', width: 11, height: 11, bottom: 0, left: 0, border: '1.5px solid #14B860', borderRadius: '3px 11px 3px 3px', boxSizing: 'border-box' }} />
-          <div style={{ position: 'absolute', width: 11, height: 11, bottom: 0, right: 0, background: '#14B860', borderRadius: '11px 3px 3px 3px' }} />
-        </div>
-        <span style={{ fontWeight: 600, fontSize: 15, color: '#fff', letterSpacing: '0.02em', fontFamily: "'Outfit', sans-serif" }}>
-          gestalt
-        </span>
+        <GestaltLogo height={26} variant="light" />
       </div>
 
       {/* Nav */}
