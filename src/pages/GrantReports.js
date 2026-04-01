@@ -3,6 +3,7 @@ import PageShell from '../components/PageShell';
 import { PlaceholderCard } from '../components/PlaceholderCard';
 import { institution } from '../data/mockData';
 import { deriveReportPreview } from '../utils/deriveMetrics';
+import { generateReportPDF } from '../utils/generateReportPDF';
 
 const REPORT_TYPES = [
   { id: 'ada_annual',    label: 'ADA Annual Compliance',     description: 'Comprehensive annual ADA compliance report for federal and state regulators.' },
@@ -70,7 +71,13 @@ export default function GrantReports({ artworks = [], artworksLoading = false })
 
           {/* Export button */}
           <button
-            onClick={() => alert('PDF export coming soon')}
+            onClick={() => generateReportPDF({
+              reportType,
+              reportLabel: selectedReport?.label || 'Report',
+              period,
+              institutionName: institution.name,
+              artworks,
+            })}
             style={{
               width: '100%', padding: '10px 16px', borderRadius: 8,
               background: '#111827', color: '#fff', border: 'none',

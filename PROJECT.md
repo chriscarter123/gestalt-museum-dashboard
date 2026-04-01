@@ -358,8 +358,11 @@ Visuals updated to match `museum-ar-app/design-system/badge-options.html`.
 - [ ] PDF export via jsPDF or server-side rendering
 - [ ] Multi-institution support (institution switcher in Sidebar footer)
 - [ ] Mobile-responsive layout (currently desktop-first)
-- [ ] Real QR code generation (replace SVG placeholder)
-- [ ] Upload images to Firebase Storage instead of blob URLs (enables persistence across sessions)
+- [x] Real QR code generation — `qrcode.react` renders scannable QR codes; auto-generates `qrCode` field on artworks; Download PNG enabled
+- [x] Upload images to Firebase Storage — `storageService.js` uploads blob URLs to `artworks/{venueId}/` before Firestore save
+- [x] PDF export for Grant Reports — `jsPDF` generates professional compliance PDFs with real artwork metrics
+- [x] Multi-institution support — `venues/{venueId}` collection + `members` subcollection; venue switcher in sidebar; auto-migration for existing users
+- [x] TTS audio generation — `describeArtwork` Cloud Function synthesizes speech via Google Neural2-F; real audio playback in AudioPlayer
 
 ---
 
@@ -373,3 +376,8 @@ Visuals updated to match `museum-ar-app/design-system/badge-options.html`.
 | 4 | 2026-03-29 | Firebase Auth + Firestore — `RegistrationForm.js` (2-step: credentials → name/position), `LoginForm.js` (signIn, password reset), `firebase.js` (shared project `gestalt-17ce0`), `onAuthStateChanged` session persistence, `role: 'institution_admin'` in Firestore; `ArtworkEditorModal.js` — 7-tab editor (Basic Info, Classification, Location, Media, Accessibility, AR Anchor, Museum Details), animated waveform audio player, AR embeddings generator; bug fixes: scroll blocked on onboarding, edit saving as new artwork (localEdits map), Generate Audio button not appearing |
 | 5 | 2026-03-29 | Editorial visual redesign — 40px grid background in `index.css`; both sidebars rebuilt with numbered serif section labels, Edition Tag tier badges, Archive Mark avatars; `PageShell.js` editorial headers (tracking eyebrow + weight-300 serif + thin rule + outlined action button); Dispatch-style `StatusBadge`; all Gallery Lite + Institution page headers updated to match design system from `badge-options.html` |
 | 6 | 2026-03-29 | AI integration — `describeArtwork` Cloud Function deployed to `us-central1` using Claude claude-sonnet-4-20250514 vision; accepts up to 4 images (URL or base64) + artwork metadata; returns `visualDescription` + `audioScript`; ANTHROPIC_API_KEY stored in Firebase Secret Manager; dashboard wired with `callDescribeArtwork()` helper (blob→base64 conversion, Firebase auth token, fetch POST); "Generate from Images" and "Generate Audio" buttons now call real Claude API with inline error handling and loading states |
+| 7 | 2026-04-01 | **Real data integration** — `artworkService.js` + `exhibitionService.js` with Firestore onSnapshot subscriptions; App.js wired as data coordinator; onboarding saves first artwork to Firestore; image upload to Firebase Storage via `storageService.js`; `deriveMetrics.js` utility for computing page metrics from real artworks; institution pages (ADA Scorecard, Audio Descriptions, AR Anchors, Grant Reports) wired to real data with placeholder states for unavailable systems; Visitor Analytics full placeholder |
+| 7b | 2026-04-01 | **TTS pipeline** — `describeArtwork` Cloud Function extended with Google Cloud TTS (Neural2-F voice, en-US); synthesizes audioScript → MP3, uploads to Firebase Storage, returns `audioUrl`; AudioPlayer component uses real `<audio>` element with seek/duration |
+| 7c | 2026-04-01 | **QR codes** — `qrcode.react` replaces mock SVG pattern; auto-generates `qrCode` field on artworks missing one; Download PNG enabled; end-to-end flow: dashboard generates QR → visitor scans with jsQR → artwork lookup |
+| 7d | 2026-04-01 | **Multi-tenant architecture** — `venueService.js` with `venues/{venueId}` collection + `members/{uid}` subcollection; `createVenue` atomic batch (venue + member + user update); venue switcher dropdown in both sidebars; `currentVenueId` state replaces uid-as-venueId pattern; auto-migration for existing users; Firestore security rules with membership checks |
+| 7e | 2026-04-01 | **PDF export** — `generateReportPDF.js` using jsPDF; generates professional ADA/audio/accessibility/AR compliance reports with real metrics, gallery breakdown table, coverage bars, compliance statement; branded header/footer with page numbers |
