@@ -7,6 +7,7 @@ import {
   query, where, orderBy, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { uploadArtworkImage } from './storageService';
 
 const COLLECTION = 'artworks';
 
@@ -48,6 +49,14 @@ export function subscribeToArtworks(venueId, callback) {
 export async function saveArtwork(data, venueId, uid) {
   const { id, ...fields } = data;
 
+  // Upload any blob-URL images to Firebase Storage before saving
+  if (fields.images && fields.images.length > 0) {
+    fields.images = await persistImages(fields.images, venueId);
+  }
+
+  // Clean up internal fields that shouldn't go to Firestore
+  delete fields._raw;
+
   // Normalize fields for Firestore
   const doc_data = {
     ...fields,
@@ -58,7 +67,7 @@ export async function saveArtwork(data, venueId, uid) {
     status: fields.status || 'active',
   };
 
-  if (id && !id.startsWith('art_')) {
+  if (id && !id.startsWith('art_') && !id.startsWith('ART-')) {
     // Existing Firestore doc — update
     const ref = doc(db, COLLECTION, id);
     await updateDoc(ref, { ...doc_data, updatedAt: serverTimestamp() });
@@ -70,6 +79,42 @@ export async function saveArtwork(data, venueId, uid) {
     const ref = await addDoc(collection(db, COLLECTION), doc_data);
     return ref.id;
   }
+}
+
+/**
+ * Upload blob-URL images to Firebase Storage and replace with permanent URLs.
+ * URL-type images are kept as-is. Returns the updated images array.
+ */
+async function persistImages(images, venueId) {
+  const results = await Promise.all(
+    images.map(async (img) => {
+      // Already a permanent URL — keep it
+      if (img.type === 'url' || (typeof img === 'string')) {
+        return typeof img === 'string' ? img : img.src;
+      }
+
+      // Blob URL — upload to Storage
+      if (img.type === 'upload' && img.src && img.src.startsWith('blob:')) {
+        try {
+          const url = await uploadArtworkImage(img.src, venueId, img.name);
+          return url;
+        } catch (e) {
+          console.warn('[artworkService] Image upload failed, skipping:', e.message);
+          return null;
+        }
+      }
+
+      // Already a Firebase URL (re-save scenario) — keep it
+      if (img.src && img.src.startsWith('http')) {
+        return img.src;
+      }
+
+      return null;
+    })
+  );
+
+  // Filter out failed uploads, return flat array of URL strings
+  return results.filter(Boolean);
 }
 
 /**
@@ -104,7 +149,10 @@ function normalizeArtwork(docSnap) {
     status: d.status || 'active',
     year: d.year || null,
     medium: d.medium || null,
-    images: d.images || [],
+    // Images stored as flat URL strings in Firestore; convert back to {type, src} for editor
+    images: (d.images || []).map(img =>
+      typeof img === 'string' ? { type: 'url', src: img } : img
+    ),
     description: d.description || d.visualDescription || null,
     audioScript: d.audioScript || null,
     audioUrl: d.audioUrl || null,
