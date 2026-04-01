@@ -1,33 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import GestaltLogo from '../components/GestaltLogo';
+import { updateArtwork } from '../services/artworkService';
 
-// A deterministic fake QR grid pattern using a fixed seed
-const QR_PATTERN = [
-  [1,1,1,1,1,1,1,0,1,0],
-  [1,0,0,0,0,0,1,0,0,1],
-  [1,0,1,1,1,0,1,0,1,0],
-  [1,0,1,1,1,0,1,1,0,1],
-  [1,0,1,1,1,0,1,0,1,1],
-  [1,0,0,0,0,0,1,1,0,0],
-  [1,1,1,1,1,1,1,0,1,0],
-  [0,0,0,0,0,0,0,1,0,1],
-  [1,0,1,1,0,1,1,0,1,0],
-  [0,1,0,0,1,0,0,1,0,1],
-];
-
-function MockQR({ size = 120 }) {
-  const cell = size / 10;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
-      {QR_PATTERN.map((row, ri) =>
-        row.map((cell_val, ci) =>
-          cell_val ? (
-            <rect key={`${ri}-${ci}`} x={ci * cell} y={ri * cell} width={cell} height={cell} fill="#111827" />
-          ) : null
-        )
-      )}
-    </svg>
-  );
+function generateQRCode() {
+  return `ART-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 }
 
 function FrameSVG({ label }) {
@@ -61,9 +38,54 @@ export default function QRSharing({ venue, artworks }) {
   const [selectedId, setSelectedId] = useState(artworkList[0]?.id || '');
   const [template, setTemplate] = useState('minimal');
   const [copied, setCopied] = useState(false);
+  const qrRef = useRef(null);
 
   const selected = artworkList.find(a => a.id === selectedId) || artworkList[0];
   const galleryLink = 'gestalt-17ce0.web.app/app';
+
+  // Ensure the selected artwork has a qrCode — generate one if missing
+  const qrValue = selected?.qrCode || selected?.id || '';
+
+  // Auto-assign a qrCode to artworks that don't have one (persists to Firestore)
+  const ensureQRCode = useCallback(async (artwork) => {
+    if (!artwork?.id || artwork.qrCode) return artwork.qrCode;
+    const newCode = generateQRCode();
+    try {
+      await updateArtwork(artwork.id, { qrCode: newCode });
+    } catch (e) {
+      console.warn('Could not persist QR code:', e);
+    }
+    return newCode;
+  }, []);
+
+  // Generate QR on first select if missing
+  React.useEffect(() => {
+    if (selected && !selected.qrCode && selected.id && !selected.id.startsWith('ART-D')) {
+      ensureQRCode(selected);
+    }
+  }, [selected, ensureQRCode]);
+
+  // Download QR as PNG
+  function handleDownloadPNG() {
+    const svgEl = qrRef.current?.querySelector('svg');
+    if (!svgEl) return;
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, 400, 400);
+      ctx.drawImage(img, 0, 0, 400, 400);
+      const link = document.createElement('a');
+      link.download = `qr-${selected?.title?.replace(/\s+/g, '-') || 'artwork'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  }
 
   function handleCopy() {
     navigator.clipboard.writeText(galleryLink).then(() => {
@@ -114,8 +136,8 @@ export default function QRSharing({ venue, artworks }) {
 
           {/* QR preview */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', marginBottom: 16 }}>
-            <div style={{ padding: 12, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, marginBottom: 10 }}>
-              <MockQR size={120} />
+            <div ref={qrRef} style={{ padding: 12, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, marginBottom: 10 }}>
+              <QRCodeSVG value={qrValue} size={120} level="M" fgColor="#111827" bgColor="#ffffff" />
             </div>
             {selected && (
               <>
@@ -131,11 +153,11 @@ export default function QRSharing({ venue, artworks }) {
                 Print label
               </button>
               <button
-                title="Coming soon"
+                onClick={handleDownloadPNG}
                 style={{
-                  padding: '7px 16px', background: '#fff', color: '#9CA3AF',
+                  padding: '7px 16px', background: '#fff', color: '#374151',
                   border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 12,
-                  cursor: 'not-allowed', fontFamily: "'Outfit', sans-serif",
+                  cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
                 }}
               >
                 Download PNG
