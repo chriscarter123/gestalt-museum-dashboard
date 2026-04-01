@@ -41,15 +41,15 @@ class ErrorBoundary extends Component {
   }
 }
 
-function InstitutionPage({ page }) {
+function InstitutionPage({ page, artworks, artworksLoading }) {
   switch (page) {
-    case 'ada':       return <ADAScorecard />;
-    case 'analytics': return <VisitorAnalytics />;
+    case 'ada':       return <ADAScorecard artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'analytics': return <VisitorAnalytics artworks={artworks} artworksLoading={artworksLoading} />;
     case 'artworks':  return <Artworks venue={null} />;
-    case 'audio':     return <AudioDescriptions />;
-    case 'anchors':   return <ARAnchors />;
-    case 'reports':   return <GrantReports />;
-    default:          return <ADAScorecard />;
+    case 'audio':     return <AudioDescriptions artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'anchors':   return <ARAnchors artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'reports':   return <GrantReports artworks={artworks} artworksLoading={artworksLoading} />;
+    default:          return <ADAScorecard artworks={artworks} artworksLoading={artworksLoading} />;
   }
 }
 
@@ -302,7 +302,7 @@ export default function App() {
             </button>
           </div>
           <Sidebar activePage={page} onNavigate={setPage} />
-          <ErrorBoundary><InstitutionPage page={page} /></ErrorBoundary>
+          <ErrorBoundary><InstitutionPage page={page} artworks={artworks} artworksLoading={artworksLoading} /></ErrorBoundary>
         </ErrorBoundary>
       </div>
     );

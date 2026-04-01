@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import MetricCard from '../components/MetricCard';
 import StatusBadge from '../components/StatusBadge';
 import PageShell from '../components/PageShell';
-import { institution, adaMetrics, galleries, audioPlays, languageDemand } from '../data/mockData';
-
-const FLOORS = ['All floors', 'Ground', 'Floor 2', 'Floor 3'];
+import { PlaceholderCard, PlaceholderMetricCard, EmptyPageState, LoadingSkeleton } from '../components/PlaceholderCard';
+import { institution } from '../data/mockData';
+import { deriveAudioCoverage, deriveGalleryBreakdown, deriveOverallArScore } from '../utils/deriveMetrics';
 
 function ProgressBar({ pct }) {
   const color = pct >= 80 ? '#14B860' : pct >= 60 ? '#D4AF37' : '#E24B4A';
@@ -15,159 +15,118 @@ function ProgressBar({ pct }) {
   );
 }
 
-function WheelchairDot({ pct }) {
-  const color = pct >= 90 ? '#14B860' : pct >= 75 ? '#D4AF37' : '#E24B4A';
-  return (
-    <span>
-      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: color, marginRight: 5 }} />
-      {pct}%
-    </span>
-  );
-}
-
-const maxPlays = Math.max(...audioPlays.map(d => d.plays));
-
-export default function ADAScorecard() {
+export default function ADAScorecard({ artworks = [], artworksLoading = false }) {
   const [activeFloor, setActiveFloor] = useState('All floors');
+
+  const audio = useMemo(() => deriveAudioCoverage(artworks), [artworks]);
+  const galleries = useMemo(() => deriveGalleryBreakdown(artworks), [artworks]);
+  const arScore = useMemo(() => deriveOverallArScore(artworks), [artworks]);
+
+  const floors = ['All floors', ...new Set(galleries.map(g => g.name))];
 
   return (
     <PageShell
       eyebrow="Accessibility"
       title="ADA accessibility scorecard"
-      subtitle={`${institution.name} · Updated ${institution.lastUpdated}`}
+      subtitle={`${institution.name} · ${artworks.length} artworks`}
       actionLabel="Export PDF"
       onAction={() => alert('PDF export coming soon')}
     >
-      {/* Metric cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
-        {adaMetrics.map(m => <MetricCard key={m.label} {...m} />)}
-      </div>
+      {artworksLoading ? <LoadingSkeleton /> : artworks.length === 0 ? <EmptyPageState pageName="ADA scorecard" /> : (
+        <>
+          {/* Metric cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
+            <MetricCard label="Audio descriptions" value={`${audio.percent}%`} detail={`${audio.covered} of ${audio.total} artworks`} trend={audio.percent >= 70 ? '+' : ''} trendDir={audio.percent >= 70 ? 'up' : 'down'} color="#14B860" pct={audio.percent} />
+            <PlaceholderMetricCard label="Languages" systemName="analytics service" />
+            <PlaceholderMetricCard label="Wheelchair access" systemName="facility database" />
+            <MetricCard label="AR reliability" value={arScore != null ? arScore.toFixed(2) : '—'} detail={arScore != null ? 'Average score' : 'No AR data'} trend="" trendDir="flat" color="#D4AF37" pct={arScore ? arScore * 100 : 0} />
+          </div>
 
-      {/* Gallery breakdown */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '24px 0 12px' }}>
-        <div style={{ fontFamily: "'Newsreader', serif", fontSize: 17, fontWeight: 600, color: '#111827' }}>
-          Gallery breakdown
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {FLOORS.map(f => (
-            <button
-              key={f}
-              onClick={() => setActiveFloor(f)}
-              style={{
-                fontSize: 11, padding: '4px 10px', borderRadius: 12,
-                border: '0.5px solid rgba(0,0,0,0.1)', cursor: 'pointer',
-                fontFamily: "'Outfit', sans-serif",
-                background: activeFloor === f ? '#111827' : '#fff',
-                color: activeFloor === f ? '#fff' : '#888',
-                borderColor: activeFloor === f ? '#111827' : 'rgba(0,0,0,0.1)',
-                transition: 'all 0.15s',
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-        <thead>
-          <tr>
-            {['Gallery', 'Artworks', 'Audio coverage', '', 'Wheelchair', 'AR score', 'Status'].map(h => (
-              <th key={h} style={{
-                textAlign: 'left', fontWeight: 500, color: '#888',
-                padding: '8px 10px', borderBottom: '1px solid rgba(0,0,0,0.06)',
-                fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em',
-                fontFamily: "'Outfit', sans-serif",
-                width: h === '' ? 120 : undefined,
-              }}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {galleries.map(g => (
-            <tr
-              key={g.name}
-              style={{ cursor: 'default' }}
-              onMouseEnter={e => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = 'rgba(20,184,96,0.02)')}
-              onMouseLeave={e => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = '')}
-            >
-              <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>
-                {g.name}
-              </td>
-              <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontFamily: "'Outfit', sans-serif" }}>
-                {g.artworks}
-              </td>
-              <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontFamily: "'Outfit', sans-serif" }}>
-                {g.audioCoverage}%
-              </td>
-              <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', width: 120 }}>
-                <ProgressBar pct={g.audioCoverage} />
-              </td>
-              <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontFamily: "'Outfit', sans-serif" }}>
-                <WheelchairDot pct={g.wheelchair} />
-              </td>
-              <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontFamily: "'Outfit', sans-serif" }}>
-                {g.arScore}
-              </td>
-              <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)' }}>
-                <StatusBadge label={g.status} dir={g.statusDir} size={10} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Analytics strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
-        {/* Audio plays bar chart */}
-        <div style={{ background: '#fff', borderRadius: 10, border: '0.5px solid rgba(0,0,0,0.06)', padding: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 500, color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12, fontFamily: "'Outfit', sans-serif" }}>
-            Audio plays — last 7 days
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 80 }}>
-            {audioPlays.map(d => (
-              <div
-                key={d.day}
-                title={`${d.day}: ${d.plays}`}
-                style={{
-                  flex: 1, background: '#14B860', borderRadius: '3px 3px 0 0',
-                  height: `${(d.plays / maxPlays) * 100}%`,
-                  opacity: 0.7, transition: 'opacity 0.15s', cursor: 'default',
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
-              />
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: '#aaa', fontFamily: "'Outfit', sans-serif" }}>
-            {audioPlays.map(d => <span key={d.day}>{d.day}</span>)}
-          </div>
-          <div style={{ marginTop: 10, fontSize: 12, color: '#888', fontFamily: "'Outfit', sans-serif" }}>
-            1,428 total plays · <span style={{ color: '#14B860', fontWeight: 500 }}>+12% vs prior week</span>
-          </div>
-        </div>
-
-        {/* Language demand */}
-        <div style={{ background: '#fff', borderRadius: 10, border: '0.5px solid rgba(0,0,0,0.06)', padding: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 500, color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12, fontFamily: "'Outfit', sans-serif" }}>
-            Language demand
-          </div>
-          {languageDemand.map(l => (
-            <div key={l.lang} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 12, fontFamily: "'Outfit', sans-serif" }}>
-              <span style={{ width: 50, color: '#888' }}>{l.lang}</span>
-              <div style={{ flex: 1, height: 5, background: 'rgba(0,0,0,0.04)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ width: `${l.pct}%`, height: '100%', background: '#D4AF37', borderRadius: 3 }} />
-              </div>
-              <span style={{ width: 32, textAlign: 'right', color: '#888', fontSize: 11 }}>{l.pct}%</span>
+          {/* Gallery breakdown */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '24px 0 12px' }}>
+            <div style={{ fontFamily: "'Newsreader', serif", fontSize: 17, fontWeight: 600, color: '#111827' }}>
+              Gallery breakdown
             </div>
-          ))}
-          <div style={{ marginTop: 10, fontSize: 12, color: '#888', fontFamily: "'Outfit', sans-serif" }}>
-            Top unmet request: <span style={{ color: '#D4AF37', fontWeight: 500 }}>Korean (34 requests)</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {floors.map(f => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFloor(f)}
+                  style={{
+                    fontSize: 11, padding: '4px 10px', borderRadius: 12,
+                    border: '0.5px solid rgba(0,0,0,0.1)', cursor: 'pointer',
+                    fontFamily: "'Outfit', sans-serif",
+                    background: activeFloor === f ? '#111827' : '#fff',
+                    color: activeFloor === f ? '#fff' : '#888',
+                    borderColor: activeFloor === f ? '#111827' : 'rgba(0,0,0,0.1)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>
+                {['Gallery', 'Artworks', 'Audio coverage', '', 'Wheelchair', 'AR score', 'Status'].map(h => (
+                  <th key={h} style={{
+                    textAlign: 'left', fontWeight: 500, color: '#888',
+                    padding: '8px 10px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+                    fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em',
+                    fontFamily: "'Outfit', sans-serif",
+                    width: h === '' ? 120 : undefined,
+                  }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {galleries
+                .filter(g => activeFloor === 'All floors' || g.name === activeFloor)
+                .map(g => (
+                <tr
+                  key={g.name}
+                  style={{ cursor: 'default' }}
+                  onMouseEnter={e => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = 'rgba(20,184,96,0.02)')}
+                  onMouseLeave={e => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = '')}
+                >
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>
+                    {g.name}
+                  </td>
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontFamily: "'Outfit', sans-serif" }}>
+                    {g.artworkCount}
+                  </td>
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontFamily: "'Outfit', sans-serif" }}>
+                    {g.audioCoveragePct}%
+                  </td>
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', width: 120 }}>
+                    <ProgressBar pct={g.audioCoveragePct} />
+                  </td>
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#aaa', fontFamily: "'Outfit', sans-serif" }}>
+                    —
+                  </td>
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)', color: '#333', fontFamily: "'Outfit', sans-serif" }}>
+                    {g.avgArScore != null ? g.avgArScore : '—'}
+                  </td>
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid rgba(0,0,0,0.04)' }}>
+                    <StatusBadge label={g.status === 'up' ? 'Good' : g.status === 'flat' ? 'Partial' : 'Missing'} dir={g.status} size={10} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Analytics strip */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
+            <PlaceholderCard icon="🔊" systemName="audio analytics" description="Track audio play counts across galleries over time" />
+            <PlaceholderCard icon="🌐" systemName="language analytics" description="See which languages visitors request most" />
+          </div>
+        </>
+      )}
     </PageShell>
   );
 }
