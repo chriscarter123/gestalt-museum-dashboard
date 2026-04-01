@@ -501,6 +501,15 @@ export default function OnboardingWizard({ onComplete }) {
       artworkCount: step2Data.title ? 1 : 0,
       onboardingComplete: true,
       _targetPage: targetPage,
+      // Pass first artwork data so App.js can persist it to Firestore
+      _artworkData: step2Data.title ? {
+        title: step2Data.title,
+        artist: step2Data.artist || 'Unknown',
+        year: step2Data.year ? parseInt(step2Data.year) : null,
+        type: step1Data.type || 'Other',
+        status: 'active',
+        hasAudio: false,
+      } : null,
       owner: { name: '', role: 'Gallery Owner', initials: '' },
       plan: {
         artworkLimit: (selectedPlan || recommendedTier) === 'starter' ? 5 : (selectedPlan || recommendedTier) === 'gallery' ? 50 : null,

@@ -107,10 +107,15 @@ function scoreColor(score) {
   return '#E24B4A';
 }
 
-function HealthScoreCard({ venue }) {
-  const score = 44;
-  const audioCount = 3;
-  const audioTotal = venue.artworkCount || 5;
+function HealthScoreCard({ venue, artworks }) {
+  const artworkList = artworks || [];
+  const audioCount = artworkList.filter(a => a.hasAudio).length;
+  const audioTotal = artworkList.length || venue.artworkCount || 0;
+  // Accessibility score: weighted from audio coverage (60%), active artworks (20%), having any artworks (20%)
+  const audioPctRaw = audioTotal > 0 ? (audioCount / audioTotal) * 100 : 0;
+  const hasArtworks = artworkList.length > 0 ? 20 : 0;
+  const activeRatio = audioTotal > 0 ? (artworkList.filter(a => a.status === 'active').length / audioTotal) * 20 : 0;
+  const score = Math.round(audioPctRaw * 0.6 + activeRatio + hasArtworks);
   const audioPct = audioTotal > 0 ? Math.round((audioCount / audioTotal) * 100) : 0;
   const audioColor = audioPct >= 80 ? '#14B860' : audioPct >= 40 ? '#D4AF37' : '#E24B4A';
 
@@ -280,7 +285,7 @@ function RecentActivity() {
   );
 }
 
-export default function GalleryHome({ venue, exhibitions, onNavigate, onNewExhibition, onVenueUpdate }) {
+export default function GalleryHome({ venue, artworks, exhibitions, onNavigate, onNewExhibition, onVenueUpdate }) {
   const [locationModalOpen, setLocationModalOpen] = useState(false);
 
   function handleSaveLocation(data) {
@@ -333,7 +338,7 @@ export default function GalleryHome({ venue, exhibitions, onNavigate, onNewExhib
         </button>
       </div>
 
-      <HealthScoreCard venue={venue} />
+      <HealthScoreCard venue={venue} artworks={artworks} />
       <SetupChecklist venue={venue} onNavigate={onNavigate} onAddLocation={() => setLocationModalOpen(true)} />
       <ExhibitionsCard venue={venue} exhibitions={exhibitions} onNewExhibition={onNewExhibition} />
       <RecentActivity />

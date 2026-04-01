@@ -2,6 +2,8 @@ import React, { useState, useEffect, Component } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { subscribeToArtworks, saveArtwork } from './services/artworkService';
+import { subscribeToExhibitions, createExhibition } from './services/exhibitionService';
 import Sidebar from './components/Sidebar';
 import GalleryLiteSidebar from './components/GalleryLiteSidebar';
 import OnboardingWizard from './components/OnboardingWizard';
@@ -51,14 +53,14 @@ function InstitutionPage({ page }) {
   }
 }
 
-function GalleryLitePage({ page, venue, artworks, exhibitions, onNavigate, onNewExhibition, onArtworkAdded, onVenueUpdate }) {
+function GalleryLitePage({ page, venue, artworks, artworksLoading, exhibitions, uid, onNavigate, onNewExhibition, onArtworkAdded, onVenueUpdate }) {
   switch (page) {
-    case 'gallery-home':     return <GalleryHome venue={venue} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} onVenueUpdate={onVenueUpdate} />;
-    case 'artworks':         return <Artworks venue={venue} artworks={artworks} onArtworkAdded={onArtworkAdded} />;
+    case 'gallery-home':     return <GalleryHome venue={venue} artworks={artworks} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} onVenueUpdate={onVenueUpdate} />;
+    case 'artworks':         return <Artworks venue={venue} artworks={artworks} artworksLoading={artworksLoading} uid={uid} onArtworkAdded={onArtworkAdded} />;
     case 'qr-sharing':       return <QRSharing venue={venue} artworks={artworks} />;
     case 'visitor-insights': return <VisitorInsights venue={venue} />;
     case 'plan-billing':     return <PlanBilling venue={venue} />;
-    default:                 return <GalleryHome venue={venue} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} onVenueUpdate={onVenueUpdate} />;
+    default:                 return <GalleryHome venue={venue} artworks={artworks} exhibitions={exhibitions} onNavigate={onNavigate} onNewExhibition={onNewExhibition} onVenueUpdate={onVenueUpdate} />;
   }
 }
 
@@ -96,8 +98,9 @@ export default function App() {
 
   const [page, setPage] = useState('ada');
   const [venue, setVenue] = useState(IS_ONBOARDING_URL ? mockData.venueGalleryDemo : mockData.venue);
-  const [exhibitions, setExhibitions] = useState(mockData.exhibitions);
+  const [exhibitions, setExhibitions] = useState([]);
   const [artworks, setArtworks] = useState([]);
+  const [artworksLoading, setArtworksLoading] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
 
   // ── Firebase session check ───────────────────────────────────────────────
@@ -124,6 +127,28 @@ export default function App() {
 
     return unsubscribe;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Firestore subscriptions — artworks + exhibitions ──────────────────────
+  useEffect(() => {
+    const uid = userProfile?.uid;
+    if (!uid) return;
+
+    let firstArtworkSnapshot = true;
+    const unsubArtworks = subscribeToArtworks(uid, (arts) => {
+      setArtworks(arts);
+      if (firstArtworkSnapshot) {
+        setArtworksLoading(false);
+        firstArtworkSnapshot = false;
+      }
+    });
+
+    const unsubExhibitions = subscribeToExhibitions(uid, setExhibitions);
+
+    return () => {
+      unsubArtworks();
+      unsubExhibitions();
+    };
+  }, [userProfile?.uid]);
 
   function applyProfile(profile) {
     setVenue(prev => ({
@@ -154,7 +179,7 @@ export default function App() {
 
   // ── App handlers ─────────────────────────────────────────────────────────
   async function handleOnboardingComplete(venueData) {
-    const { _targetPage, ...rest } = venueData;
+    const { _targetPage, _artworkData, ...rest } = venueData;
     setVenue(prev => ({ ...prev, ...rest }));
     setPage(_targetPage || 'gallery-home');
 
@@ -170,30 +195,60 @@ export default function App() {
             floorCount: rest.floorCount || 1,
           },
         });
+
+        // Save the first artwork from onboarding step 2
+        if (_artworkData?.title) {
+          await saveArtwork(_artworkData, userProfile.uid, userProfile.uid);
+        }
       } catch (e) {
         console.warn('Could not persist onboarding to Firestore:', e);
       }
     }
   }
 
-  function handleArtworkAdded(artwork) {
-    setArtworks(prev => [...prev, artwork]);
+  async function handleArtworkAdded(artwork) {
+    if (userProfile?.uid) {
+      try {
+        await saveArtwork(artwork, userProfile.uid, userProfile.uid);
+        // onSnapshot listener will update artworks state automatically
+      } catch (e) {
+        console.error('Failed to save artwork:', e);
+        // Fallback: add to local state so user sees it
+        setArtworks(prev => [...prev, { ...artwork, id: 'art_' + Date.now() }]);
+      }
+    } else {
+      // No auth — local-only fallback
+      setArtworks(prev => [...prev, { ...artwork, id: 'art_' + Date.now() }]);
+    }
     setVenue(prev => ({ ...prev, artworkCount: (prev.artworkCount || 0) + 1 }));
   }
 
-  function handleNewExhibition(exh) {
-    setExhibitions(prev => [exh, ...prev]);
+  async function handleNewExhibition(exh) {
     setActiveModal(null);
+    if (userProfile?.uid) {
+      try {
+        await createExhibition(exh, userProfile.uid);
+        // onSnapshot listener will update exhibitions state automatically
+      } catch (e) {
+        console.error('Failed to save exhibition:', e);
+        setExhibitions(prev => [{ ...exh, id: 'exh_' + Date.now() }, ...prev]);
+      }
+    } else {
+      setExhibitions(prev => [{ ...exh, id: 'exh_' + Date.now() }, ...prev]);
+    }
   }
 
   function switchToGalleryLiteDemo() {
     setVenue(mockData.venueGalleryDemo);
     setArtworks([]);
+    setExhibitions(mockData.exhibitions);
+    setArtworksLoading(false);
     setPage('gallery-home');
   }
 
   function switchBackToInstitution() {
     setVenue(mockData.venue);
+    setExhibitions(mockData.exhibitions);
     setPage('ada');
   }
 
@@ -285,7 +340,9 @@ export default function App() {
               page={page}
               venue={venue}
               artworks={artworks}
+              artworksLoading={artworksLoading}
               exhibitions={exhibitions}
+              uid={userProfile?.uid}
               onNavigate={setPage}
               onNewExhibition={() => setActiveModal('new-exhibition')}
               onArtworkAdded={handleArtworkAdded}

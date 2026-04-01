@@ -3,6 +3,7 @@ import StatusBadge from '../components/StatusBadge';
 import PageShell from '../components/PageShell';
 import ArtworkEditorModal from '../components/ArtworkEditorModal';
 import { institution, artworksList as defaultArtworksList } from '../data/mockData';
+import { updateArtwork } from '../services/artworkService';
 
 const STATUS_STYLES = {
   active:       { label: 'Active',       dir: 'up' },
@@ -54,7 +55,7 @@ function EmptyState({ onAdd }) {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function Artworks({ venue, artworks: externalArtworks, onArtworkAdded }) {
+export default function Artworks({ venue, artworks: externalArtworks, artworksLoading, uid, onArtworkAdded }) {
   const [search, setSearch]   = useState('');
   const [gallery, setGallery] = useState('All galleries');
   const [type, setType]       = useState('All types');
@@ -62,13 +63,9 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null); // null = new, object = existing
 
-  // localEdits stores in-place edits keyed by artwork id
-  const [localEdits, setLocalEdits] = useState({});
-
   const isLiteMode = !!venue;
-  // Base list from props or mock; apply any local edits on top
-  const baseList = isLiteMode ? (externalArtworks || []) : defaultArtworksList;
-  const artworksList = baseList.map(a => localEdits[a.id] ? { ...a, ...localEdits[a.id] } : a);
+  // Firestore data via props for Gallery Lite; mock data for Institution demo
+  const artworksList = isLiteMode ? (externalArtworks || []) : defaultArtworksList;
 
   const isAtLimit = isLiteMode && venue?.tier === 'starter' && artworksList.length >= (venue?.plan?.artworkLimit || 5);
 
@@ -89,12 +86,16 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
     fontFamily: "'Outfit', sans-serif", outline: 'none',
   };
 
-  function handleSaveArtwork(artwork) {
-    if (editTarget) {
-      // In-place update — patch only this artwork in the list
-      setLocalEdits(prev => ({ ...prev, [artwork.id]: artwork }));
+  async function handleSaveArtwork(artwork) {
+    if (editTarget && isLiteMode && artwork.id && !artwork.id.startsWith('art_')) {
+      // Firestore update — onSnapshot will propagate the change
+      try {
+        await updateArtwork(artwork.id, artwork);
+      } catch (e) {
+        console.error('Failed to update artwork:', e);
+      }
     } else {
-      // Brand new artwork — bubble up so App.js state (and the count) stays in sync
+      // Brand new artwork — bubble up so App.js saves to Firestore
       if (onArtworkAdded) onArtworkAdded(artwork);
     }
     setDrawerOpen(false);
@@ -139,7 +140,12 @@ export default function Artworks({ venue, artworks: externalArtworks, onArtworkA
           </div>
         )}
 
-        {artworksList.length === 0 ? (
+        {(isLiteMode && artworksLoading) ? (
+          <div style={{ textAlign: 'center', padding: 60, color: '#9CA3AF', fontSize: 14 }}>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #E5E7EB', borderTopColor: '#14B860', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
+            Loading artworks...
+          </div>
+        ) : artworksList.length === 0 ? (
           <EmptyState onAdd={openNewArtwork} />
         ) : (
           <>
