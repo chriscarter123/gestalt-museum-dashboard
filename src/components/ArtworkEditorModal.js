@@ -143,33 +143,93 @@ const selectStyle = {
 };
 
 // ── Audio Player ───────────────────────────────────────────────────────────────
-function AudioPlayer({ script }) {
+function AudioPlayer({ script, audioUrl }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(MOCK_DURATION);
+  const audioRef = useRef(null);
   const intervalRef = useRef(null);
+
+  // Use real <audio> element when audioUrl is available
+  const hasRealAudio = !!audioUrl;
+
+  useEffect(() => {
+    if (hasRealAudio && !audioRef.current) {
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.addEventListener('loadedmetadata', () => {
+        if (audioRef.current.duration && isFinite(audioRef.current.duration)) {
+          setDuration(Math.round(audioRef.current.duration));
+        }
+      });
+      audioRef.current.addEventListener('ended', () => {
+        setPlaying(false);
+        setProgress(0);
+      });
+    }
+    return () => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      clearInterval(intervalRef.current);
+    };
+  }, [audioUrl, hasRealAudio]);
 
   useEffect(() => {
     if (playing) {
-      intervalRef.current = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) { setPlaying(false); clearInterval(intervalRef.current); return 0; }
-          return p + (100 / MOCK_DURATION / 10);
-        });
-      }, 100);
+      if (hasRealAudio && audioRef.current) {
+        audioRef.current.play().catch(() => setPlaying(false));
+        intervalRef.current = setInterval(() => {
+          if (audioRef.current) {
+            const pct = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+            setProgress(isNaN(pct) ? 0 : pct);
+          }
+        }, 100);
+      } else {
+        // Fallback: simulated playback for script-only
+        intervalRef.current = setInterval(() => {
+          setProgress(p => {
+            if (p >= 100) { setPlaying(false); clearInterval(intervalRef.current); return 0; }
+            return p + (100 / duration / 10);
+          });
+        }, 100);
+      }
     } else {
+      if (hasRealAudio && audioRef.current) audioRef.current.pause();
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
-  }, [playing]);
+  }, [playing, hasRealAudio, duration]);
 
   function handleToggle() {
-    if (progress >= 100) setProgress(0);
+    if (progress >= 100) {
+      setProgress(0);
+      if (hasRealAudio && audioRef.current) audioRef.current.currentTime = 0;
+    }
     setPlaying(p => !p);
   }
+
+  function handleSeek(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    setProgress(pct);
+    if (hasRealAudio && audioRef.current) {
+      audioRef.current.currentTime = (pct / 100) * audioRef.current.duration;
+    }
+    if (!playing) setPlaying(true);
+  }
+
+  const elapsed = hasRealAudio && audioRef.current
+    ? Math.floor(audioRef.current.currentTime || 0)
+    : Math.floor((progress / 100) * duration);
 
   return (
     <div style={{ background: '#E8F7EF', borderRadius: 8, padding: 14 }}>
       <style>{`@keyframes waveBar { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.9)} }`}</style>
+      {hasRealAudio && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: '#14B860', fontFamily: "'Outfit', sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            ✧ Neural Narration
+          </span>
+        </div>
+      )}
       <p style={{ fontSize: 11, color: '#0D7A3E', fontFamily: "'Outfit', sans-serif", marginBottom: 12, lineHeight: 1.6 }}>
         {script}
       </p>
@@ -195,17 +255,10 @@ function AudioPlayer({ script }) {
           })}
         </div>
         <span style={{ fontSize: 11, color: '#0D7A3E', fontFamily: "'Outfit', sans-serif", flexShrink: 0, minWidth: 32, textAlign: 'right' }}>
-          {playing || progress > 0 ? `${Math.floor((progress / 100) * MOCK_DURATION)}s` : `${MOCK_DURATION}s`}
+          {elapsed}s / {duration}s
         </span>
       </div>
-      <div style={{ height: 3, background: 'rgba(13,122,62,0.15)', borderRadius: 2, cursor: 'pointer' }}
-        onClick={e => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-          setProgress(pct);
-          if (!playing) setPlaying(true);
-        }}
-      >
+      <div style={{ height: 3, background: 'rgba(13,122,62,0.15)', borderRadius: 2, cursor: 'pointer' }} onClick={handleSeek}>
         <div style={{ height: '100%', width: `${progress}%`, background: '#14B860', borderRadius: 2, transition: 'width 0.1s linear' }} />
       </div>
     </div>
@@ -503,7 +556,12 @@ function TabMedia({ data, onChange }) {
     setAudioError('');
     try {
       const result = await callDescribeArtwork(data);
-      onChange({ ...data, audioScript: result.audioScript });
+      onChange({
+        ...data,
+        audioScript: result.audioScript,
+        audioUrl: result.audioUrl || data.audioUrl || null,
+        hasAudio: !!(result.audioScript || result.audioUrl),
+      });
       setAudioState('done');
     } catch (e) {
       setAudioError(e.message);
@@ -547,7 +605,7 @@ function TabMedia({ data, onChange }) {
 
       {hasAudio && (
         <>
-          <AudioPlayer script={data.audioScript || ''} />
+          <AudioPlayer script={data.audioScript || ''} audioUrl={data.audioUrl} />
           <div style={{ marginTop: 12 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: '#374151', fontFamily: "'Outfit', sans-serif", display: 'block', marginBottom: 5 }}>
               Edit Script
