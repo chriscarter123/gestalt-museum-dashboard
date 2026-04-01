@@ -1,4 +1,6 @@
 import React from 'react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 import GestaltLogo from './GestaltLogo';
 
 // Section numbers map to nav group order
@@ -293,9 +295,22 @@ export default function GalleryLiteSidebar({ activePage, onNavigate, venue, user
             textTransform: 'uppercase',
             marginTop: 1,
           }}>
-            {owner.role || 'Owner'}
+            {owner.role || owner.position || 'Owner'}
           </div>
         </div>
+        <button
+          onClick={() => signOut(auth).then(() => window.location.reload())}
+          title="Sign out"
+          style={{
+            marginLeft: 'auto', background: 'none', border: 'none',
+            color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 14,
+            padding: 4, flexShrink: 0, lineHeight: 1,
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+        >
+          ↗
+        </button>
       </div>
     </div>
   );

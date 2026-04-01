@@ -1,4 +1,6 @@
 import React from 'react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 import { institution } from '../data/mockData';
 import GestaltLogo from './GestaltLogo';
 
@@ -223,9 +225,22 @@ export default function Sidebar({ activePage, onNavigate, venue, userVenues = []
             fontFamily: "'Outfit', sans-serif",
             letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 1,
           }}>
-            {user.role}
+            {user.role || user.position}
           </div>
         </div>
+        <button
+          onClick={() => signOut(auth).then(() => window.location.reload())}
+          title="Sign out"
+          style={{
+            marginLeft: 'auto', background: 'none', border: 'none',
+            color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 14,
+            padding: 4, flexShrink: 0, lineHeight: 1,
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+        >
+          ↗
+        </button>
       </div>
     </div>
   );
