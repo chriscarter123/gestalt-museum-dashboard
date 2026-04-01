@@ -47,8 +47,8 @@ const NAV = [
   },
 ];
 
-export default function Sidebar({ activePage, onNavigate }) {
-  const { user } = institution;
+export default function Sidebar({ activePage, onNavigate, venue, userVenues = [], currentVenueId, onSwitchVenue, userProfile }) {
+  const user = userProfile || institution.user || {};
 
   return (
     <div style={{
@@ -62,6 +62,32 @@ export default function Sidebar({ activePage, onNavigate }) {
       }}>
         <GestaltLogo height={26} variant="light" />
       </div>
+
+      {/* Venue switcher */}
+      {userVenues.length > 1 && (
+        <div style={{ padding: '10px 16px 6px' }}>
+          <select
+            value={currentVenueId || ''}
+            onChange={e => onSwitchVenue?.(e.target.value)}
+            style={{
+              width: '100%', padding: '6px 8px', borderRadius: 6,
+              background: 'rgba(255,255,255,0.06)', color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)', fontSize: 11,
+              fontFamily: "'Outfit', sans-serif", cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {userVenues.map(v => (
+              <option key={v.id} value={v.id} style={{ background: '#111827' }}>{v.name || 'Unnamed venue'}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {userVenues.length <= 1 && venue?.name && (
+        <div style={{ padding: '10px 20px 6px', fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: "'Outfit', sans-serif" }}>
+          {venue.name}
+        </div>
+      )}
 
       {/* Nav */}
       <div style={{ flex: 1, padding: '12px 0 8px', overflowY: 'auto' }}>

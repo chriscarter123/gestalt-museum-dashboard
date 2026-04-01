@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { subscribeToArtworks, saveArtwork } from './services/artworkService';
 import { subscribeToExhibitions, createExhibition } from './services/exhibitionService';
+import { createVenue, subscribeToVenue, setCurrentVenue, migrateInlineVenue } from './services/venueService';
 import Sidebar from './components/Sidebar';
 import GalleryLiteSidebar from './components/GalleryLiteSidebar';
 import OnboardingWizard from './components/OnboardingWizard';
@@ -103,24 +104,50 @@ export default function App() {
   const [artworksLoading, setArtworksLoading] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
 
+  // Multi-tenant state
+  const [currentVenueId, setCurrentVenueId] = useState(null);
+  const [userVenues, setUserVenues] = useState([]); // [{ id, name, role }]
+
   // ── Firebase session check ───────────────────────────────────────────────
   useEffect(() => {
     if (!IS_ONBOARDING_URL) return;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Already logged in — fetch their Firestore profile
         try {
           const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
           const profile = snap.exists() ? snap.data() : { uid: firebaseUser.uid, email: firebaseUser.email };
           setUserProfile(profile);
-          applyProfile(profile);
+
+          // Multi-tenant: check for venues array
+          if (profile.venues?.length > 0) {
+            // Has venues — load them
+            setUserVenues(profile.venues);
+            const venueId = profile.currentVenueId || profile.venues[0].id;
+            setCurrentVenueId(venueId);
+            applyProfile(profile);
+          } else if (profile.venue && profile.onboardingComplete) {
+            // Old inline venue — migrate to multi-tenant schema
+            try {
+              const migratedId = await migrateInlineVenue(profile);
+              if (migratedId) {
+                setUserVenues([{ id: migratedId, name: profile.venue.name || '', role: 'owner' }]);
+                setCurrentVenueId(migratedId);
+              }
+            } catch (e) {
+              console.warn('Migration failed, using inline venue:', e);
+            }
+            applyProfile(profile);
+          } else {
+            // No venues, no inline venue — needs onboarding
+            applyProfile(profile);
+          }
+
           setAuthScreen('authenticated');
         } catch {
           setAuthScreen('login');
         }
       } else {
-        // No session — show login if they've registered before, else registration
         setAuthScreen('login');
       }
     });
@@ -128,13 +155,17 @@ export default function App() {
     return unsubscribe;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Firestore subscriptions — artworks + exhibitions ──────────────────────
+  // ── Firestore subscriptions — artworks + exhibitions + venue ────────────
   useEffect(() => {
-    const uid = userProfile?.uid;
-    if (!uid) return;
+    if (!currentVenueId) return;
+
+    // Reset state when switching venues
+    setArtworksLoading(true);
+    setArtworks([]);
+    setExhibitions([]);
 
     let firstArtworkSnapshot = true;
-    const unsubArtworks = subscribeToArtworks(uid, (arts) => {
+    const unsubArtworks = subscribeToArtworks(currentVenueId, (arts) => {
       setArtworks(arts);
       if (firstArtworkSnapshot) {
         setArtworksLoading(false);
@@ -142,13 +173,20 @@ export default function App() {
       }
     });
 
-    const unsubExhibitions = subscribeToExhibitions(uid, setExhibitions);
+    const unsubExhibitions = subscribeToExhibitions(currentVenueId, setExhibitions);
+
+    const unsubVenue = subscribeToVenue(currentVenueId, (venueDoc) => {
+      if (venueDoc) {
+        setVenue(prev => ({ ...prev, ...venueDoc }));
+      }
+    });
 
     return () => {
       unsubArtworks();
       unsubExhibitions();
+      unsubVenue();
     };
-  }, [userProfile?.uid]);
+  }, [currentVenueId]);
 
   function applyProfile(profile) {
     setVenue(prev => ({
@@ -183,22 +221,16 @@ export default function App() {
     setVenue(prev => ({ ...prev, ...rest }));
     setPage(_targetPage || 'gallery-home');
 
-    // Persist onboarding completion + venue snapshot to Firestore
+    // Create venue document via venueService
     if (userProfile?.uid) {
       try {
-        await updateDoc(doc(db, 'users', userProfile.uid), {
-          onboardingComplete: true,
-          venue: {
-            name: rest.name || '',
-            type: rest.type || '',
-            tier: rest.tier || 'starter',
-            floorCount: rest.floorCount || 1,
-          },
-        });
+        const newVenueId = await createVenue(rest, userProfile.uid, userProfile);
+        setCurrentVenueId(newVenueId);
+        setUserVenues(prev => [...prev, { id: newVenueId, name: rest.name || '', role: 'owner' }]);
 
         // Save the first artwork from onboarding step 2
         if (_artworkData?.title) {
-          await saveArtwork(_artworkData, userProfile.uid, userProfile.uid);
+          await saveArtwork(_artworkData, newVenueId, userProfile.uid);
         }
       } catch (e) {
         console.warn('Could not persist onboarding to Firestore:', e);
@@ -207,17 +239,15 @@ export default function App() {
   }
 
   async function handleArtworkAdded(artwork) {
-    if (userProfile?.uid) {
+    const venueId = currentVenueId;
+    if (venueId && userProfile?.uid) {
       try {
-        await saveArtwork(artwork, userProfile.uid, userProfile.uid);
-        // onSnapshot listener will update artworks state automatically
+        await saveArtwork(artwork, venueId, userProfile.uid);
       } catch (e) {
         console.error('Failed to save artwork:', e);
-        // Fallback: add to local state so user sees it
         setArtworks(prev => [...prev, { ...artwork, id: 'art_' + Date.now() }]);
       }
     } else {
-      // No auth — local-only fallback
       setArtworks(prev => [...prev, { ...artwork, id: 'art_' + Date.now() }]);
     }
     setVenue(prev => ({ ...prev, artworkCount: (prev.artworkCount || 0) + 1 }));
@@ -225,16 +255,34 @@ export default function App() {
 
   async function handleNewExhibition(exh) {
     setActiveModal(null);
-    if (userProfile?.uid) {
+    const venueId = currentVenueId;
+    if (venueId && userProfile?.uid) {
       try {
-        await createExhibition(exh, userProfile.uid);
-        // onSnapshot listener will update exhibitions state automatically
+        await createExhibition(exh, venueId);
       } catch (e) {
         console.error('Failed to save exhibition:', e);
         setExhibitions(prev => [{ ...exh, id: 'exh_' + Date.now() }, ...prev]);
       }
     } else {
       setExhibitions(prev => [{ ...exh, id: 'exh_' + Date.now() }, ...prev]);
+    }
+  }
+
+  // ── Venue switching ─────────────────────────────────────────────────────
+  async function switchVenue(venueId) {
+    if (venueId === currentVenueId) return;
+    setCurrentVenueId(venueId);
+    // Update venue state from the venues list
+    const venueEntry = userVenues.find(v => v.id === venueId);
+    if (venueEntry) {
+      setVenue(prev => ({ ...prev, name: venueEntry.name }));
+    }
+    setPage('gallery-home');
+    // Persist selection
+    if (userProfile?.uid) {
+      try { await setCurrentVenue(userProfile.uid, venueId); } catch (e) {
+        console.warn('Could not persist venue selection:', e);
+      }
     }
   }
 
@@ -301,7 +349,7 @@ export default function App() {
               Preview Gallery Lite
             </button>
           </div>
-          <Sidebar activePage={page} onNavigate={setPage} />
+          <Sidebar activePage={page} onNavigate={setPage} venue={venue} userVenues={userVenues} currentVenueId={currentVenueId} onSwitchVenue={switchVenue} userProfile={userProfile} />
           <ErrorBoundary><InstitutionPage page={page} artworks={artworks} artworksLoading={artworksLoading} /></ErrorBoundary>
         </ErrorBoundary>
       </div>
@@ -333,7 +381,7 @@ export default function App() {
           </div>
         )}
 
-        <GalleryLiteSidebar activePage={page} onNavigate={setPage} venue={venue} />
+        <GalleryLiteSidebar activePage={page} onNavigate={setPage} venue={venue} userVenues={userVenues} currentVenueId={currentVenueId} onSwitchVenue={switchVenue} userProfile={userProfile} />
         <ErrorBoundary>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingTop: venue.id === 'venue_demo' ? 36 : 0 }}>
             <GalleryLitePage
