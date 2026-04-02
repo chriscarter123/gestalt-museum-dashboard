@@ -522,15 +522,20 @@ function TabLocation({ data, onChange }) {
       </Field>
 
       <SectionHeading>Proximity & GPS</SectionHeading>
-      <Field label="Visitor Proximity Trigger" hint={`${data.proximityRadius || 5} m — visitor's app shows info when within this distance.`}>
+      <Field
+        label="Visitor Proximity Trigger"
+        hint={`${data.proximityRadius || 50} m — visitor's app alerts them when within this distance. Use 10–30 m for indoor works, 50–150 m for street murals.`}
+      >
         <input
-          type="range" min={1} max={50} step={1}
-          value={data.proximityRadius || 5}
+          type="range" min={5} max={150} step={5}
+          value={data.proximityRadius || 50}
           onChange={e => onChange({ ...data, proximityRadius: parseInt(e.target.value) })}
           style={{ width: '100%', accentColor: '#14B860' }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9CA3AF', fontFamily: "'Outfit', sans-serif", marginTop: 4 }}>
-          <span>1 m</span><span style={{ color: '#14B860', fontWeight: 500 }}>{data.proximityRadius || 5} m</span><span>50 m</span>
+          <span>5 m</span>
+          <span style={{ color: '#14B860', fontWeight: 500 }}>{data.proximityRadius || 50} m</span>
+          <span>150 m</span>
         </div>
       </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -925,7 +930,7 @@ export default function ArtworkEditorModal({ artwork, onSave, onClose }) {
     floor: artwork?.floor || '1',
     wallPosition: artwork?.wallPosition || '',
     hangingHeight: artwork?.hangingHeight || '',
-    proximityRadius: artwork?.proximityRadius || 5,
+    proximityRadius: artwork?.proximityRadius || 50,
     lat: artwork?.lat || '',
     lng: artwork?.lng || '',
     // media
