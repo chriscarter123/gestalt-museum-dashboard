@@ -35,6 +35,10 @@ const NAV = [
         id: 'anchors', label: 'AR anchors',
         icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="8" cy="8" r="3"/><line x1="8" y1="2" x2="8" y2="5"/><line x1="8" y1="11" x2="8" y2="14"/><line x1="2" y1="8" x2="5" y2="8"/><line x1="11" y1="8" x2="14" y2="8"/></svg>,
       },
+      {
+        id: 'submissions', label: 'Contributions',
+        icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2"><circle cx="8" cy="5" r="2.5"/><path d="M3 13c0-2.761 2.239-5 5-5s5 2.239 5 5"/><polyline points="10 2 12 4 10 6" /><line x1="8" y1="2" x2="12" y2="2"/></svg>,
+      },
     ],
   },
   {
@@ -49,7 +53,7 @@ const NAV = [
   },
 ];
 
-export default function Sidebar({ activePage, onNavigate, venue, userVenues = [], currentVenueId, onSwitchVenue, userProfile }) {
+export default function Sidebar({ activePage, onNavigate, venue, userVenues = [], currentVenueId, onSwitchVenue, userProfile, pendingSubmissions = 0 }) {
   const user = userProfile || institution.user || {};
 
   return (
@@ -123,6 +127,7 @@ export default function Sidebar({ activePage, onNavigate, venue, userVenues = []
             </div>
             {items.map(({ id, label, icon }) => {
               const active = activePage === id;
+              const badge = id === 'submissions' && pendingSubmissions > 0 ? pendingSubmissions : 0;
               return (
                 <div
                   key={id}
@@ -142,6 +147,22 @@ export default function Sidebar({ activePage, onNavigate, venue, userVenues = []
                 >
                   <div style={{ width: 15, height: 15, opacity: active ? 1 : 0.5, flexShrink: 0 }}>{icon}</div>
                   {label}
+                  {badge > 0 && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      minWidth: 18, height: 18,
+                      padding: '0 5px',
+                      borderRadius: 9,
+                      background: '#E24B4A',
+                      color: '#fff',
+                      fontSize: 10, fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: "'Outfit', sans-serif",
+                      lineHeight: 1,
+                    }}>
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
                 </div>
               );
             })}

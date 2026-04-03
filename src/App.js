@@ -3,6 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { subscribeToArtworks, saveArtwork } from './services/artworkService';
+import { subscribeToSubmissions } from './services/submissionService';
 import { subscribeToExhibitions, createExhibition } from './services/exhibitionService';
 import { createVenue, subscribeToVenue, setCurrentVenue, migrateInlineVenue } from './services/venueService';
 import Sidebar from './components/Sidebar';
@@ -21,6 +22,7 @@ import GalleryHome from './pages/GalleryHome';
 import QRSharing from './pages/QRSharing';
 import VisitorInsights from './pages/VisitorInsights';
 import PlanBilling from './pages/PlanBilling';
+import Submissions from './pages/Submissions';
 import * as mockData from './data/mockData';
 
 const IS_ONBOARDING_URL = window.location.pathname.includes('/onboarding');
@@ -42,15 +44,16 @@ class ErrorBoundary extends Component {
   }
 }
 
-function InstitutionPage({ page, artworks, artworksLoading }) {
+function InstitutionPage({ page, artworks, artworksLoading, submissions, submissionsLoading, uid, venueId }) {
   switch (page) {
-    case 'ada':       return <ADAScorecard artworks={artworks} artworksLoading={artworksLoading} />;
-    case 'analytics': return <VisitorAnalytics artworks={artworks} artworksLoading={artworksLoading} />;
-    case 'artworks':  return <Artworks venue={null} />;
-    case 'audio':     return <AudioDescriptions artworks={artworks} artworksLoading={artworksLoading} />;
-    case 'anchors':   return <ARAnchors artworks={artworks} artworksLoading={artworksLoading} />;
-    case 'reports':   return <GrantReports artworks={artworks} artworksLoading={artworksLoading} />;
-    default:          return <ADAScorecard artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'ada':         return <ADAScorecard artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'analytics':   return <VisitorAnalytics artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'artworks':    return <Artworks venue={null} />;
+    case 'audio':       return <AudioDescriptions artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'anchors':     return <ARAnchors artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'reports':     return <GrantReports artworks={artworks} artworksLoading={artworksLoading} />;
+    case 'submissions': return <Submissions submissions={submissions} submissionsLoading={submissionsLoading} uid={uid} venueId={venueId} />;
+    default:            return <ADAScorecard artworks={artworks} artworksLoading={artworksLoading} />;
   }
 }
 
@@ -102,6 +105,8 @@ export default function App() {
   const [exhibitions, setExhibitions] = useState([]);
   const [artworks, setArtworks] = useState([]);
   const [artworksLoading, setArtworksLoading] = useState(true);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
 
   // Multi-tenant state
@@ -163,6 +168,8 @@ export default function App() {
     setArtworksLoading(true);
     setArtworks([]);
     setExhibitions([]);
+    setSubmissionsLoading(true);
+    setSubmissions([]);
 
     let firstArtworkSnapshot = true;
     const unsubArtworks = subscribeToArtworks(currentVenueId, (arts) => {
@@ -181,10 +188,16 @@ export default function App() {
       }
     });
 
+    const unsubSubmissions = subscribeToSubmissions((subs) => {
+      setSubmissions(subs);
+      setSubmissionsLoading(false);
+    });
+
     return () => {
       unsubArtworks();
       unsubExhibitions();
       unsubVenue();
+      unsubSubmissions();
     };
   }, [currentVenueId]);
 
@@ -349,8 +362,8 @@ export default function App() {
               Preview Gallery Lite
             </button>
           </div>
-          <Sidebar activePage={page} onNavigate={setPage} venue={venue} userVenues={userVenues} currentVenueId={currentVenueId} onSwitchVenue={switchVenue} userProfile={userProfile} />
-          <ErrorBoundary><InstitutionPage page={page} artworks={artworks} artworksLoading={artworksLoading} /></ErrorBoundary>
+          <Sidebar activePage={page} onNavigate={setPage} venue={venue} userVenues={userVenues} currentVenueId={currentVenueId} onSwitchVenue={switchVenue} userProfile={userProfile} pendingSubmissions={submissions.filter(s => s.status === 'pending_review').length} />
+          <ErrorBoundary><InstitutionPage page={page} artworks={artworks} artworksLoading={artworksLoading} submissions={submissions} submissionsLoading={submissionsLoading} uid={userProfile?.uid} venueId={currentVenueId} /></ErrorBoundary>
         </ErrorBoundary>
       </div>
     );
