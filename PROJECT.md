@@ -353,16 +353,15 @@ Visuals updated to match `museum-ar-app/design-system/badge-options.html`.
 
 ## Planned — next milestones
 
-- [ ] Wire artworkService.js from museum-ar-app as real data source (Firestore)
-- [ ] Audio playback (Web Audio API) with real TTS — currently waveform is animated mock
-- [ ] PDF export via jsPDF or server-side rendering
-- [ ] Multi-institution support (institution switcher in Sidebar footer)
 - [ ] Mobile-responsive layout (currently desktop-first)
+- [ ] Visitor analytics pipeline (currently placeholder)
+- [x] Wire artworkService.js from museum-ar-app as real data source (Firestore)
+- [x] Audio playback (Web Audio API) with real TTS — `describeArtwork` Cloud Function synthesizes speech via Google Neural2-F; real audio playback in AudioPlayer
 - [x] Real QR code generation — `qrcode.react` renders scannable QR codes; auto-generates `qrCode` field on artworks; Download PNG enabled
 - [x] Upload images to Firebase Storage — `storageService.js` uploads blob URLs to `artworks/{venueId}/` before Firestore save
 - [x] PDF export for Grant Reports — `jsPDF` generates professional compliance PDFs with real artwork metrics
 - [x] Multi-institution support — `venues/{venueId}` collection + `members` subcollection; venue switcher in sidebar; auto-migration for existing users
-- [x] TTS audio generation — `describeArtwork` Cloud Function synthesizes speech via Google Neural2-F; real audio playback in AudioPlayer
+- [x] Proximity radius slider — 5–150m range, 50m default, synced with AR app fallback value
 
 ---
 
@@ -381,3 +380,4 @@ Visuals updated to match `museum-ar-app/design-system/badge-options.html`.
 | 7c | 2026-04-01 | **QR codes** — `qrcode.react` replaces mock SVG pattern; auto-generates `qrCode` field on artworks missing one; Download PNG enabled; end-to-end flow: dashboard generates QR → visitor scans with jsQR → artwork lookup |
 | 7d | 2026-04-01 | **Multi-tenant architecture** — `venueService.js` with `venues/{venueId}` collection + `members/{uid}` subcollection; `createVenue` atomic batch (venue + member + user update); venue switcher dropdown in both sidebars; `currentVenueId` state replaces uid-as-venueId pattern; auto-migration for existing users; Firestore security rules with membership checks |
 | 7e | 2026-04-01 | **PDF export** — `generateReportPDF.js` using jsPDF; generates professional ADA/audio/accessibility/AR compliance reports with real metrics, gallery breakdown table, coverage bars, compliance statement; branded header/footer with page numbers |
+| 8 | 2026-04-02 | **Proximity radius slider** — expanded range from 1–50m → 5–150m in 5m steps; default changed from 5m → 50m to match AR app fallback; hint text updated to guide curators (10–30m indoor, 50–150m street murals) |
