@@ -41,6 +41,7 @@ export async function generateAudioDescription(artwork, onProgress = () => {}) {
     medium:     artwork.medium     || undefined,
     subject:    artwork.subject    || undefined,
     dimensions: artwork.dimensions || undefined,
+    context:    artwork.context    || undefined,  // curator notes
   };
 
   // ── Call Cloud Function ───────────────────────────────────────────────────
@@ -72,6 +73,7 @@ export async function generateAudioDescription(artwork, onProgress = () => {}) {
   const updates = {
     visualDescription: result.visualDescription || null,
     audioScript:       result.audioScript       || null,
+    contextualNote:    result.contextualNote    || null,
     audioUrl:          result.audioUrl          || null,
   };
 
