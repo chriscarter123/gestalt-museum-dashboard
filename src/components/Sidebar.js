@@ -1,8 +1,19 @@
 import React from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import { institution } from '../data/mockData';
 import GestaltLogo from './GestaltLogo';
+
+// Derive initials from a display name, falling back to email prefix
+function getInitials(name, email) {
+  if (name?.trim()) {
+    const parts = name.trim().split(/\s+/);
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+  }
+  if (email) return email.slice(0, 2).toUpperCase();
+  return '—';
+}
 
 const NAV = [
   {
@@ -54,7 +65,11 @@ const NAV = [
 ];
 
 export default function Sidebar({ activePage, onNavigate, venue, userVenues = [], currentVenueId, onSwitchVenue, userProfile, pendingSubmissions = 0 }) {
-  const user = userProfile || institution.user || {};
+  const name     = userProfile?.name     || userProfile?.displayName || '';
+  const email    = userProfile?.email    || '';
+  const role     = userProfile?.position || userProfile?.role        || '';
+  const initials = userProfile?.initials || getInitials(name, email);
+  const user     = { name: name || email || 'Unknown', role, initials };
 
   return (
     <div style={{

@@ -4,7 +4,7 @@ import { auth } from '../firebase';
 // ── Constants ──────────────────────────────────────────────────────────────────
 const WAVEFORM = [6,10,14,8,16,12,10,14,8,6,12,10,16,8,12,14,10,6,14,12];
 const MOCK_DURATION = 24;
-const DESCRIBE_URL = 'https://describeartwork-ptwp2avaqa-uc.a.run.app';
+const DESCRIBE_URL = 'https://us-central1-gestalt-17ce0.cloudfunctions.net/describeArtwork';
 
 const TABS = [
   { key: 'basic',      label: 'Basic Info' },
