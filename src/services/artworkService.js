@@ -154,9 +154,20 @@ function normalizeArtwork(docSnap) {
       typeof img === 'string' ? { type: 'url', src: img } : img
     ),
     description: d.description || d.visualDescription || null,
+    visualDescription: d.visualDescription || null,
+    // Three-tier audio
+    overviewScript:   d.overviewScript   || d.audioScript || null,
+    detailsScript:    d.detailsScript    || null,
+    contextScript:    d.contextScript    || null,
+    audioUrlOverview: d.audioUrlOverview || d.audioUrl    || null,
+    audioUrlDetails:  d.audioUrlDetails  || null,
+    audioUrlContext:  d.audioUrlContext  || null,
+    voice:            d.voice            || null,
+    descriptionTrust: d.descriptionTrust || null,
+    descriptionEditedAt: d.descriptionEditedAt || null,
+    // Legacy
     audioScript: d.audioScript || null,
     audioUrl: d.audioUrl || null,
-    visualDescription: d.visualDescription || null,
     location: d.location || null,
     embeddings: d.embeddings || [],
     qrCode: d.qrCode || null,

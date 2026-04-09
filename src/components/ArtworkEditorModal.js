@@ -6,6 +6,22 @@ const WAVEFORM = [6,10,14,8,16,12,10,14,8,6,12,10,16,8,12,14,10,6,14,12];
 const MOCK_DURATION = 24;
 const DESCRIBE_URL = 'https://us-central1-gestalt-17ce0.cloudfunctions.net/describeArtwork';
 
+const SUPPORTED_VOICES = [
+  { name: 'en-US-Neural2-F', label: 'Female — Warm (default)' },
+  { name: 'en-US-Neural2-A', label: 'Female — Bright'         },
+  { name: 'en-US-Neural2-C', label: 'Female — Clear'          },
+  { name: 'en-US-Neural2-D', label: 'Male — Warm'             },
+  { name: 'en-US-Neural2-I', label: 'Male — Steady'           },
+  { name: 'en-US-Neural2-J', label: 'Male — Rich'             },
+];
+const DEFAULT_VOICE = 'en-US-Neural2-F';
+
+const AUDIO_TIERS = [
+  { key: 'overview', label: 'Overview', hint: '~15 sec', scriptKey: 'overviewScript', urlKey: 'audioUrlOverview' },
+  { key: 'details',  label: 'Details',  hint: '~60 sec', scriptKey: 'detailsScript',  urlKey: 'audioUrlDetails'  },
+  { key: 'context',  label: 'Context',  hint: '~45 sec', scriptKey: 'contextScript',  urlKey: 'audioUrlContext'  },
+];
+
 const TABS = [
   { key: 'basic',      label: 'Basic Info' },
   { key: 'classify',   label: 'Classification' },
@@ -34,8 +50,8 @@ async function blobUrlToBase64(blobUrl) {
 }
 
 // Calls the deployed describeArtwork Cloud Function.
-// Returns { visualDescription, audioScript }
-async function callDescribeArtwork(data) {
+// Returns { visualDescription, overviewScript, detailsScript, contextScript, audioUrl* }
+async function callDescribeArtwork(data, voice = DEFAULT_VOICE) {
   // Build image payload — up to 4 images
   const imagePayload = [];
   for (const img of (data.images || []).slice(0, 4)) {
@@ -76,7 +92,7 @@ async function callDescribeArtwork(data) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ images: imagePayload, metadata }),
+    body: JSON.stringify({ images: imagePayload, metadata, voice }),
   });
 
   if (!res.ok) {
@@ -261,6 +277,101 @@ function AudioPlayer({ script, audioUrl }) {
       <div style={{ height: 3, background: 'rgba(13,122,62,0.15)', borderRadius: 2, cursor: 'pointer' }} onClick={handleSeek}>
         <div style={{ height: '100%', width: `${progress}%`, background: '#14B860', borderRadius: 2, transition: 'width 0.1s linear' }} />
       </div>
+    </div>
+  );
+}
+
+// ── Trust Badge ────────────────────────────────────────────────────────────────
+function TrustBadge({ trust }) {
+  const isAI = trust !== 'curator';
+  return (
+    <div
+      title={isAI ? 'This description was generated automatically and may contain inaccuracies. Review before publishing.' : 'A curator has reviewed and edited this description.'}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        padding: '3px 9px', borderRadius: 20, cursor: isAI ? 'help' : 'default',
+        background: isAI ? '#FEF3C7' : '#D1FAE5',
+        color:      isAI ? '#92400E' : '#065F46',
+        fontSize: 10, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
+        textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0,
+      }}
+    >
+      {isAI ? '◎ AI Generated' : '✓ Curator Approved'}
+      {isAI && <span style={{ fontSize: 11, fontWeight: 700 }}>?</span>}
+    </div>
+  );
+}
+
+// ── Tiered Audio Player ────────────────────────────────────────────────────────
+function TieredAudioPlayer({ data, onChange }) {
+  const [activeTier, setActiveTier] = useState('overview');
+  const tier = AUDIO_TIERS.find(t => t.key === activeTier);
+
+  function handleScriptEdit(val) {
+    onChange({
+      ...data,
+      [tier.scriptKey]: val,
+      descriptionTrust: 'curator',
+      descriptionEditedAt: new Date().toISOString(),
+    });
+  }
+
+  const script   = data[tier.scriptKey] || '';
+  const audioUrl = data[tier.urlKey]    || null;
+
+  return (
+    <div>
+      {/* Tier tab strip */}
+      <div style={{
+        display: 'flex', borderRadius: 8, overflow: 'hidden',
+        border: '1.5px solid #E5E7EB', marginBottom: 12,
+      }}>
+        {AUDIO_TIERS.map((t, i) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTier(t.key)}
+            style={{
+              flex: 1, padding: '8px 4px', border: 'none', cursor: 'pointer',
+              background: activeTier === t.key ? '#14B860' : '#fff',
+              color: activeTier === t.key ? '#fff' : '#6B7280',
+              fontFamily: "'Outfit', sans-serif",
+              borderRight: i < AUDIO_TIERS.length - 1 ? '1px solid #E5E7EB' : 'none',
+              transition: 'background 0.15s',
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t.label}</div>
+            <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{t.hint}</div>
+          </button>
+        ))}
+      </div>
+
+      {script || audioUrl ? (
+        <>
+          <AudioPlayer script={script} audioUrl={audioUrl} />
+          <div style={{ marginTop: 12 }}>
+            <label style={{
+              fontSize: 12, fontWeight: 500, color: '#374151',
+              fontFamily: "'Outfit', sans-serif", display: 'block', marginBottom: 5,
+            }}>
+              Edit {tier.label} Script
+            </label>
+            <textarea
+              style={{ ...textareaStyle, minHeight: 80 }}
+              value={script}
+              onChange={e => handleScriptEdit(e.target.value)}
+              placeholder={`${tier.label} script…`}
+            />
+          </div>
+        </>
+      ) : (
+        <div style={{
+          border: '1.5px dashed #E5E7EB', borderRadius: 8,
+          padding: '14px 16px', textAlign: 'center',
+          color: '#9CA3AF', fontSize: 12, fontFamily: "'Outfit', sans-serif",
+        }}>
+          No {tier.label.toLowerCase()} audio yet — click Generate Audio above.
+        </div>
+      )}
     </div>
   );
 }
@@ -552,20 +663,34 @@ function TabLocation({ data, onChange }) {
 
 // ── Tab: Media ─────────────────────────────────────────────────────────────────
 function TabMedia({ data, onChange }) {
-  // Start in 'done' state if this artwork already has a script (editing existing)
-  const [audioState, setAudioState] = useState(() => data.audioScript ? 'done' : 'idle');
+  const hasExisting = !!(data.overviewScript || data.audioScript);
+  const [audioState, setAudioState] = useState(() => hasExisting ? 'done' : 'idle');
   const [audioError, setAudioError] = useState('');
+
+  const voice = data.voice || DEFAULT_VOICE;
+  const trust = data.descriptionTrust || (hasExisting ? 'ai' : null);
+  const hasAudio = audioState === 'done' || hasExisting;
 
   async function generateAudio() {
     setAudioState('generating');
     setAudioError('');
     try {
-      const result = await callDescribeArtwork(data);
+      const result = await callDescribeArtwork(data, voice);
       onChange({
         ...data,
-        audioScript: result.audioScript,
-        audioUrl: result.audioUrl || data.audioUrl || null,
-        hasAudio: !!(result.audioScript || result.audioUrl),
+        // Three-tier fields
+        overviewScript:   result.overviewScript   || result.audioScript || '',
+        detailsScript:    result.detailsScript    || '',
+        contextScript:    result.contextScript    || '',
+        audioUrlOverview: result.audioUrlOverview || result.audioUrl    || null,
+        audioUrlDetails:  result.audioUrlDetails  || null,
+        audioUrlContext:  result.audioUrlContext  || null,
+        // Legacy fields (backward compat)
+        audioScript: result.overviewScript || result.audioScript || '',
+        audioUrl:    result.audioUrlOverview || result.audioUrl  || null,
+        hasAudio:    true,
+        descriptionTrust: 'ai',
+        voice: result.voice || voice,
       });
       setAudioState('done');
     } catch (e) {
@@ -574,17 +699,24 @@ function TabMedia({ data, onChange }) {
     }
   }
 
-  const hasAudio = audioState === 'done' || !!data.audioScript;
-
   return (
     <div>
       <SectionHeading>Audio Description</SectionHeading>
 
-      {/* Always-visible generate / regenerate row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 10 }}>
-        <div style={{ fontSize: 12, color: audioError ? '#E24B4A' : '#6B7280', fontFamily: "'Outfit', sans-serif", flex: 1 }}>
-          {audioError || (hasAudio ? 'AI-generated · editable below.' : 'AI-generated from artwork images and title.')}
-        </div>
+      {/* Trust badge + voice picker + generate button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        {trust && <TrustBadge trust={trust} />}
+        <div style={{ flex: 1 }} />
+        <select
+          style={{ ...selectStyle, width: 'auto', minWidth: 170, fontSize: 12, padding: '6px 10px' }}
+          value={voice}
+          onChange={e => onChange({ ...data, voice: e.target.value })}
+          title="Voice used for the next Generate Audio call"
+        >
+          {SUPPORTED_VOICES.map(v => (
+            <option key={v.name} value={v.name}>{v.label}</option>
+          ))}
+        </select>
         <button
           onClick={generateAudio}
           disabled={audioState === 'generating'}
@@ -597,35 +729,27 @@ function TabMedia({ data, onChange }) {
           }}
         >
           {audioState === 'generating' ? <Spinner size={12} /> : '✦'}
-          {audioState === 'generating' ? 'Generating…' : hasAudio ? 'Regenerate' : 'Generate Audio'}
+          {audioState === 'generating' ? 'Generating…' : hasAudio ? 'Regenerate All' : 'Generate Audio'}
         </button>
       </div>
+
+      {audioError && (
+        <div style={{ fontSize: 12, color: '#E24B4A', fontFamily: "'Outfit', sans-serif", marginBottom: 10 }}>
+          {audioError}
+        </div>
+      )}
 
       {audioState === 'generating' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#F4F6F3', borderRadius: 8, marginBottom: 12 }}>
           <Spinner />
-          <span style={{ fontSize: 12, color: '#6B7280', fontFamily: "'Outfit', sans-serif" }}>Generating audio description…</span>
+          <span style={{ fontSize: 12, color: '#6B7280', fontFamily: "'Outfit', sans-serif" }}>
+            Generating three-tier audio — Overview, Details, and Context…
+          </span>
         </div>
       )}
 
-      {hasAudio && (
-        <>
-          <AudioPlayer script={data.audioScript || ''} audioUrl={data.audioUrl} />
-          <div style={{ marginTop: 12 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: '#374151', fontFamily: "'Outfit', sans-serif", display: 'block', marginBottom: 5 }}>
-              Edit Script
-            </label>
-            <textarea
-              style={{ ...textareaStyle, minHeight: 80 }}
-              value={data.audioScript || ''}
-              onChange={e => onChange({ ...data, audioScript: e.target.value })}
-              placeholder="Audio description script…"
-            />
-          </div>
-        </>
-      )}
+      {hasAudio && <TieredAudioPlayer data={data} onChange={onChange} />}
 
-      {/* Empty state prompt when no audio yet */}
       {!hasAudio && audioState !== 'generating' && (
         <div style={{
           border: '1.5px dashed #E5E7EB', borderRadius: 8, padding: '20px 16px',
@@ -636,7 +760,7 @@ function TabMedia({ data, onChange }) {
             No audio description yet
           </div>
           <div style={{ fontSize: 12, color: '#9CA3AF', fontFamily: "'Outfit', sans-serif" }}>
-            Click <strong style={{ color: '#14B860' }}>Generate Audio</strong> above to create one from this artwork's images and title.
+            Click <strong style={{ color: '#14B860' }}>Generate Audio</strong> above to create Overview, Details, and Context tiers.
           </div>
         </div>
       )}
@@ -933,7 +1057,17 @@ export default function ArtworkEditorModal({ artwork, onSave, onClose }) {
     proximityRadius: artwork?.proximityRadius || 50,
     lat: artwork?.lat || '',
     lng: artwork?.lng || '',
-    // media
+    // media — three-tier audio
+    overviewScript:   artwork?.overviewScript   || artwork?.audioScript || '',
+    detailsScript:    artwork?.detailsScript    || '',
+    contextScript:    artwork?.contextScript    || '',
+    audioUrlOverview: artwork?.audioUrlOverview || artwork?.audioUrl   || null,
+    audioUrlDetails:  artwork?.audioUrlDetails  || null,
+    audioUrlContext:  artwork?.audioUrlContext  || null,
+    voice:            artwork?.voice            || DEFAULT_VOICE,
+    descriptionTrust: artwork?.descriptionTrust || null,
+    descriptionEditedAt: artwork?.descriptionEditedAt || null,
+    // legacy (kept for older builds / backward compat)
     audioScript: artwork?.audioScript || '',
     videoUrl: artwork?.videoUrl || '',
     catalogUrl: artwork?.catalogUrl || '',
@@ -984,7 +1118,7 @@ export default function ArtworkEditorModal({ artwork, onSave, onClose }) {
       ...artwork,
       ...data,
       id: artwork?.id || `ART-${Date.now()}`,
-      hasAudio: !!data.audioScript,
+      hasAudio: !!(data.overviewScript || data.audioScript),
       arScore: data.arActive ? 0.85 : 0.5,
       status: artwork?.status || 'active',
     });
