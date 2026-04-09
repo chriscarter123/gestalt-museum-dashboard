@@ -52,9 +52,8 @@ function deriveTier(range) {
   return 'institution';
 }
 
-// ── Mock audio waveform ────────────────────────────────────────────────────────
-const WAVEFORM   = [6,10,14,8,16,12,10,14,8,6,12,10,16,8,12,14,10,6,14,12];
-const MOCK_SECS  = 26;
+// ── Waveform bars ─────────────────────────────────────────────────────────────
+const WAVEFORM = [6,10,14,8,16,12,10,14,8,6,12,10,16,8,12,14,10,6,14,12];
 
 // ── Shared primitives ──────────────────────────────────────────────────────────
 function SegmentedControl({ options, value, onChange }) {
@@ -277,18 +276,23 @@ const GEN_PHASES = [
 ];
 
 function Step4({ artworkData }) {
-  const [phase,    setPhase]    = useState(0);
-  const [genDone,  setGenDone]  = useState(false);
-  const [playing,  setPlaying]  = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [hasPlayed,setHasPlayed]= useState(false);
-  const playRef = useRef(null);
+  const [phase,     setPhase]    = useState(0);
+  const [genDone,   setGenDone]  = useState(false);
+  const [playing,   setPlaying]  = useState(false);
+  const [progress,  setProgress] = useState(0);
+  const [hasPlayed, setHasPlayed]= useState(false);
+  const tickRef     = useRef(null);
+  const startedAtMs = useRef(null);  // wall-clock ms when current play segment began
+  const offsetPct   = useRef(0);     // progress% at the moment play was pressed
 
   const mockDesc = artworkData.title
     ? `${artworkData.title}${artworkData.artist ? ` by ${artworkData.artist}` : ''}${artworkData.year ? `, ${artworkData.year}` : ''}. A compelling work that draws the viewer into its composition through a deliberate use of form, color, and texture. The artist invites sustained looking — a conversation between the artwork and the space around it.`
     : 'A captivating work that draws the viewer into its composition through a deliberate use of form and color.';
 
-  // Auto-start mock generation on mount
+  // Estimate duration (~2.8 words/sec for TTS)
+  const estSecs = useRef(Math.max(8, Math.round(mockDesc.split(' ').length / 2.8)));
+
+  // Auto-start "generation" animation on mount
   useEffect(() => {
     let p = 0;
     const phaseTimer = setInterval(() => {
@@ -302,25 +306,69 @@ function Step4({ artworkData }) {
     return () => { clearInterval(phaseTimer); clearTimeout(doneTimer); };
   }, []);
 
-  // Playback progress ticker
+  // Cancel speech & ticker on unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel();
+      clearInterval(tickRef.current);
+    };
+  }, []);
+
+  // Progress ticker — synced to real elapsed time
   useEffect(() => {
     if (playing) {
-      playRef.current = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) { setPlaying(false); clearInterval(playRef.current); return 0; }
-          return p + (100 / MOCK_SECS / 10);
-        });
-      }, 100);
+      startedAtMs.current = Date.now();
+      tickRef.current = setInterval(() => {
+        const elapsedSecs = (Date.now() - startedAtMs.current) / 1000;
+        const pct = Math.min(100, offsetPct.current + (elapsedSecs / estSecs.current) * 100);
+        setProgress(pct);
+        if (pct >= 100) {
+          setPlaying(false);
+          clearInterval(tickRef.current);
+        }
+      }, 80);
     } else {
-      clearInterval(playRef.current);
+      clearInterval(tickRef.current);
     }
-    return () => clearInterval(playRef.current);
-  }, [playing]);
+    return () => clearInterval(tickRef.current);
+  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function speak() {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(mockDesc);
+    utt.rate  = 0.92;
+    utt.pitch = 1.0;
+    // Pick a natural-sounding voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => /samantha|karen|daniel|moira|fiona/i.test(v.name))
+                   || voices.find(v => v.lang.startsWith('en') && !v.name.includes('Google'));
+    if (preferred) utt.voice = preferred;
+    utt.onend = () => {
+      setPlaying(false);
+      setProgress(100);
+      clearInterval(tickRef.current);
+    };
+    window.speechSynthesis.speak(utt);
+  }
 
   function togglePlay() {
-    if (progress >= 100) setProgress(0);
     if (!hasPlayed) setHasPlayed(true);
-    setPlaying(p => !p);
+    if (playing) {
+      // Pause
+      window.speechSynthesis?.cancel();
+      setPlaying(false);
+    } else {
+      // Play / replay
+      if (progress >= 100) {
+        setProgress(0);
+        offsetPct.current = 0;
+      } else {
+        offsetPct.current = progress;
+      }
+      speak();
+      setPlaying(true);
+    }
   }
 
   return (
@@ -387,7 +435,7 @@ function Step4({ artworkData }) {
                 })}
               </div>
               <span style={{ fontSize:11, color:'#0D7A3E', fontFamily:"'Outfit', sans-serif", flexShrink:0, minWidth:28, textAlign:'right' }}>
-                {playing || progress > 0 ? `${Math.floor((progress/100)*MOCK_SECS)}s` : `${MOCK_SECS}s`}
+                {playing || progress > 0 ? `${Math.floor((progress/100)*estSecs.current)}s` : `${estSecs.current}s`}
               </span>
             </div>
             <div

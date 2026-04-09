@@ -25,7 +25,8 @@ import PlanBilling from './pages/PlanBilling';
 import Submissions from './pages/Submissions';
 import * as mockData from './data/mockData';
 
-const IS_ONBOARDING_URL = window.location.pathname.includes('/onboarding');
+// Always run in authenticated mode (auth check runs on every load)
+const IS_ONBOARDING_URL = true;
 
 // ── Error Boundary ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {

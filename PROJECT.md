@@ -383,3 +383,35 @@ Visuals updated to match `museum-ar-app/design-system/badge-options.html`.
 | 8 | 2026-04-02 | **Proximity radius slider** — expanded range from 1–50m → 5–150m in 5m steps; default changed from 5m → 50m to match AR app fallback; hint text updated to guide curators (10–30m indoor, 50–150m street murals) |
 | 9 | 2026-04-07 | **Pilot readiness fixes** — `ArtworkEditorModal.js`: corrected stale Cloud Run URL → `us-central1-gestalt-17ce0.cloudfunctions.net/describeArtwork` (was pointing to dead Cloud Run direct endpoint, breaking Generate AI Description); `Sidebar.js`: removed `mockData` import, replaced hardcoded institution user with real `userProfile` prop — name/email/role/initials now drawn from Firestore auth profile; added `getInitials()` helper for graceful fallback from display name → email prefix |
 | 10 | 2026-04-08 | **Firestore composite indexes** — `subscribeToArtworks` and `subscribeToExhibitions` were silently returning empty (error caught by `onSnapshot` handler as `callback([])`); root cause: both queries combine `where venueId == X` with `orderBy` on a different field, requiring a composite index. Composite indexes created in `museum-ar-app/firestore.indexes.json` (shared Firebase project): `artworks(venueId, createdAt)`, `exhibitions(venueId, startDate)`, `submissions(is_first_finder, location.lat)`, `submissions(location.lat, is_first_finder)`. Deployed and confirmed in sync. |
+
+### Session 11 — 2026-04-09 (Three-tier audio, voice picker, trust badges)
+
+**Objective:** Implement multi-layer audio descriptions and curation UX from the Cowork ideation session.
+
+#### `describeArtwork` Cloud Function integration — `ArtworkEditorModal.js`
+- `callDescribeArtwork(data, voice)` now passes chosen voice to the CF.
+- `generateAudio()` stores all 6 new fields (`overviewScript`, `detailsScript`, `contextScript`, `audioUrlOverview`, `audioUrlDetails`, `audioUrlContext`) plus `voice`, `descriptionTrust`, `descriptionEditedAt`; legacy `audioScript`/`audioUrl` preserved for backward compat.
+- `data` state initialization extended with all new fields.
+- `handleSave` evaluates `hasAudio` as `!!(data.overviewScript || data.audioScript)`.
+
+#### Voice picker — `ArtworkEditorModal.js`
+- `SUPPORTED_VOICES` array (6 Google Neural2 voices) and `DEFAULT_VOICE = 'en-US-Neural2-F'`.
+- Curator-side `<select>` in the Media tab; voice is baked at generation time, not visitor-selectable.
+- Voice stored on artwork Firestore doc; re-generating respects the current selection.
+
+#### Trust badges — `ArtworkEditorModal.js`
+- `TrustBadge({ trust })` component: amber pill "AI Generated" (with ⓘ tooltip warning of inaccuracies), green pill "Curator Approved".
+- Editing any script textarea in `TieredAudioPlayer` sets `descriptionTrust: 'curator'` + `descriptionEditedAt` timestamp.
+
+#### Tiered audio player — `ArtworkEditorModal.js`
+- `TieredAudioPlayer({ data, onChange })`: tab strip (Overview / Details / Context) + `<audio>` player + editable script textarea.
+- Tab switching remounts audio element; editing any script marks trust as `'curator'`.
+- `TabMedia` rewritten around voice picker, TrustBadge, Generate button, and TieredAudioPlayer.
+
+#### `artworkService.js` — `normalizeArtwork()`
+- Maps all 6 new audio tier fields + `voice`, `descriptionTrust`, `descriptionEditedAt` from Firestore doc.
+
+#### Session table update
+| Session | Date | Work |
+|---|---|---|
+| 11 | 2026-04-09 | **Three-tier audio + voice picker + trust badges** — `ArtworkEditorModal.js` wired to new CF response shape (3 scripts + 3 audio URLs); curator voice picker (6 Neural2 voices, baked at generation); `TrustBadge` (AI Generated / Curator Approved); `TieredAudioPlayer` with tab strip and editable scripts; `artworkService.normalizeArtwork` extended; legacy fields preserved |

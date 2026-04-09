@@ -51,6 +51,41 @@ function StrengthBar({ password }) {
   ) : null;
 }
 
+function Shell({ step, heading, sub, errors, children, onSubmit }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: '#F4F6F3',
+      overflowY: 'auto', fontFamily: "'Outfit', sans-serif", padding: '40px 20px',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 440, background: '#fff', margin: '0 auto',
+        borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.1)', padding: '40px 40px 36px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+          <GestaltLogo height={32} variant="dark" />
+        </div>
+        <StepDots step={step} />
+        <h1 style={{ fontFamily: "'Newsreader', serif", fontSize: 26, fontWeight: 400, color: '#111827', margin: '0 0 6px', textAlign: 'center' }}>
+          {heading}
+        </h1>
+        <p style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', margin: '0 0 28px' }}>{sub}</p>
+
+        {errors.firebase && (
+          <div style={{
+            fontSize: 12, color: '#E24B4A', padding: '10px 14px', background: '#FEF2F2',
+            borderRadius: 8, border: '1px solid #FECACA', marginBottom: 20,
+            fontFamily: "'Outfit', sans-serif", lineHeight: 1.5,
+          }}>
+            {errors.firebase}
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} noValidate>{children}</form>
+      </div>
+    </div>
+  );
+}
+
 export default function RegistrationForm({ onRegistered, onShowLogin }) {
   const [step, setStep]           = useState(1);
   // Step 1
@@ -132,43 +167,12 @@ export default function RegistrationForm({ onRegistered, onShowLogin }) {
     }
   }
 
-  const Shell = ({ heading, sub, children, onSubmit }) => (
-    <div style={{
-      position: 'fixed', inset: 0, background: '#F4F6F3',
-      overflowY: 'auto', fontFamily: "'Outfit', sans-serif", padding: '40px 20px',
-    }}>
-      <div style={{
-        width: '100%', maxWidth: 440, background: '#fff', margin: '0 auto',
-        borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.1)', padding: '40px 40px 36px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-          <GestaltLogo height={32} variant="dark" />
-        </div>
-        <StepDots step={step} />
-        <h1 style={{ fontFamily: "'Newsreader', serif", fontSize: 26, fontWeight: 400, color: '#111827', margin: '0 0 6px', textAlign: 'center' }}>
-          {heading}
-        </h1>
-        <p style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', margin: '0 0 28px' }}>{sub}</p>
-
-        {errors.firebase && (
-          <div style={{
-            fontSize: 12, color: '#E24B4A', padding: '10px 14px', background: '#FEF2F2',
-            borderRadius: 8, border: '1px solid #FECACA', marginBottom: 20,
-            fontFamily: "'Outfit', sans-serif", lineHeight: 1.5,
-          }}>
-            {errors.firebase}
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} noValidate>{children}</form>
-      </div>
-    </div>
-  );
-
   // ── Step 1 UI ────────────────────────────────────────────────────────────
   if (step === 1) {
     return (
       <Shell
+        step={step}
+        errors={errors}
         heading="Create your account"
         sub="Set up Gestalt for your gallery in minutes."
         onSubmit={handleStep1}
@@ -232,6 +236,8 @@ export default function RegistrationForm({ onRegistered, onShowLogin }) {
   // ── Step 2 UI ────────────────────────────────────────────────────────────
   return (
     <Shell
+      step={step}
+      errors={errors}
       heading="Tell us about yourself"
       sub="This helps personalise your Gestalt experience."
       onSubmit={handleStep2}
