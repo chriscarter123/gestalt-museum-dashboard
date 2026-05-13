@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import StatusBadge from '../components/StatusBadge';
 import PageShell from '../components/PageShell';
 import ArtworkEditorModal from '../components/ArtworkEditorModal';
-import { institution, artworksList as defaultArtworksList } from '../data/mockData';
+import { institution, artworksList as pmaArtworksList, muralArtsArtworksList } from '../data/mockData';
+
+// The dashboard's institution demo currently runs in Mural Arts mode (see
+// ADAScorecard pulling from muralArtsMock). Show the Mural Arts pilot
+// shortlist by default so the Artworks tab and the ADA scorecard agree.
+// Flip this to pmaArtworksList for the PMA scenario.
+const defaultArtworksList = muralArtsArtworksList;
 import { updateArtwork } from '../services/artworkService';
 
 const STATUS_STYLES = {

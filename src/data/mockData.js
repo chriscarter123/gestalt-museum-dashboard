@@ -162,6 +162,24 @@ export const artworksList = [
   { id: 'ART-012', title: 'Vase with Flowers',           artist: 'Jan Brueghel',       gallery: 'South Gallery — European',    type: 'Painting',   hasAudio: false, arScore: 0.61, status: 'deteriorating' },
 ];
 
+// ── Mural Arts Pilot Artworks ────────────────────────────────────────────────
+// The nine works on the Mural Arts Philadelphia pilot shortlist. Authoritative
+// copy and reference imagery live in the Gestalt Lite repo at
+// `scripts/seed/mural-arts-pilot.json`; this file mirrors only the fields the
+// dashboard's artwork tables and metric derivers need. Keep slugs in sync.
+// Source brief: Brain/Gestalt/General/Sales/Meetings/Mural Arts - Pilot Seed Content.md
+export const muralArtsArtworksList = [
+  { id: 'MAP-001', slug: 'sherald',  title: 'Untitled (Najee S.)',     artist: 'Amy Sherald',                          gallery: 'Center City',         type: 'Mural',     hasAudio: true,  arScore: 0.92, status: 'active' },
+  { id: 'MAP-002', slug: 'ct1998',   title: 'Common Threads',           artist: 'Meg Saligman',                         gallery: 'North Broad',         type: 'Mural',     hasAudio: true,  arScore: 0.88, status: 'active' },
+  { id: 'MAP-003', slug: 'muses',    title: 'Philadelphia Muses',       artist: 'Meg Saligman',                         gallery: 'Gayborhood',          type: 'Mural',     hasAudio: true,  arScore: 0.84, status: 'active' },
+  { id: 'MAP-004', slug: 'pride',    title: 'Pride and Progress',       artist: 'Ann Northrup',                         gallery: 'Gayborhood',          type: 'Mural',     hasAudio: true,  arScore: 0.81, status: 'active' },
+  { id: 'MAP-005', slug: 'water',    title: 'Water Gives Life',         artist: 'Eurhi Jones & David McShane',          gallery: 'Center City',         type: 'Mural',     hasAudio: true,  arScore: 0.79, status: 'active' },
+  { id: 'MAP-006', slug: 'atlas',    title: 'The Atlas of Tomorrow',    artist: 'Candy Chang',                          gallery: 'South Street',        type: 'Installation', hasAudio: true, arScore: 0.74, status: 'active' },
+  { id: 'MAP-007', slug: 'webb',     title: 'Building the City',        artist: 'Michael Webb',                         gallery: 'Center City',         type: 'Mural',     hasAudio: false, arScore: 0.69, status: 'active' },
+  { id: 'MAP-008', slug: 'finding',  title: 'Finding Home',             artist: 'Kathryn Pannepacker & Josh Sarantitis',gallery: 'Center City',         type: 'Mixed media', hasAudio: false, arScore: 0.66, status: 'unverified' },
+  { id: 'MAP-009', slug: 'youth',    title: 'We the Youth',             artist: 'Keith Haring',                         gallery: 'Point Breeze',        type: 'Mural',     hasAudio: true,  arScore: 0.71, status: 'active' },
+];
+
 // ── Audio Descriptions ────────────────────────────────────────────────────────
 export const audioMetrics = [
   { label: 'Covered',           value: '219', detail: 'of 302 artworks',  trend: '+11 ↑ 30d',  trendDir: 'up',   color: '#14B860', pct: 73 },
